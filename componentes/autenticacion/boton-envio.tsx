@@ -13,7 +13,7 @@ export function BotonEnvio({
   const { pending } = useFormStatus();
 
   return (
-    <Button className="w-full" disabled={pending} size="3" type="submit">
+    <Button className="w-full !bg-indigo-950 !text-white" disabled={pending} size="3" type="submit">
       {pending ? textoPendiente : texto}
     </Button>
   );
