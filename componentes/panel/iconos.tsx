@@ -53,6 +53,35 @@ export function IconoSettings(props: Props) {
   );
 }
 
+export function IconoClientes(props: Props) {
+  return (
+    <IconoBase {...props}>
+      <path
+        d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.7"
+      />
+      <circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="1.7" />
+      <path
+        d="M23 21v-2a4 4 0 0 0-3-3.87"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.7"
+      />
+      <path
+        d="M16 3.13a4 4 0 0 1 0 7.75"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.7"
+      />
+    </IconoBase>
+  );
+}
+
 export function IconoBuscar(props: Props) {
   return (
     <IconoBase {...props}>

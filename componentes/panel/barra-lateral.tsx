@@ -3,13 +3,18 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { IconoHome, IconoSettings } from "@/componentes/panel/iconos";
+import { IconoHome, IconoClientes, IconoSettings } from "@/componentes/panel/iconos";
 
 const enlaces = [
   {
     href: "/",
     etiqueta: "Home",
     icono: IconoHome,
+  },
+  {
+    href: "/clientes",
+    etiqueta: "Clientes",
+    icono: IconoClientes,
   },
   {
     href: "/settings",
