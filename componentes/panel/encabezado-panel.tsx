@@ -35,8 +35,13 @@ export function EncabezadoPanel({
 }) {
   const pathname = usePathname();
   const esSettings = pathname.startsWith("/settings");
-  const seccion = esSettings ? "Settings" : "Home";
-  const titulo = esSettings ? "Configuración" : "Dashboard";
+  const esClientes = pathname.startsWith("/clientes");
+  const seccion = esSettings ? "Settings" : esClientes ? "Clientes" : "Home";
+  const titulo = esSettings
+    ? "Configuración"
+    : esClientes
+      ? "Gestión de clientes"
+      : "Dashboard";
 
   return (
     <header className="border-b border-slate-200/75 px-4 py-4 md:px-6">
