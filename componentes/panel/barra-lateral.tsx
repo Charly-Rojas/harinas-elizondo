@@ -3,7 +3,16 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { IconoHome, IconoClientes, IconoSettings } from "@/componentes/panel/iconos";
+import {
+  IconoCertificados,
+  IconoClientes,
+  IconoEquipos,
+  IconoHome,
+  IconoInspecciones,
+  IconoLotes,
+  IconoParametros,
+  IconoSettings,
+} from "@/componentes/panel/iconos";
 
 const enlaces = [
   {
@@ -17,6 +26,31 @@ const enlaces = [
     icono: IconoClientes,
   },
   {
+    href: "/equipos",
+    etiqueta: "Equipos",
+    icono: IconoEquipos,
+  },
+  {
+    href: "/parametros",
+    etiqueta: "Parámetros",
+    icono: IconoParametros,
+  },
+  {
+    href: "/lotes",
+    etiqueta: "Lotes",
+    icono: IconoLotes,
+  },
+  {
+    href: "/inspecciones",
+    etiqueta: "Inspecciones",
+    icono: IconoInspecciones,
+  },
+  {
+    href: "/certificados",
+    etiqueta: "Certificados",
+    icono: IconoCertificados,
+  },
+  {
     href: "/settings",
     etiqueta: "Settings",
     icono: IconoSettings,
@@ -28,7 +62,7 @@ export function BarraLateral() {
 
   return (
     <>
-      <aside className="hidden w-[260px] shrink-0 overflow-hidden rounded-[32px] px-5 py-6 lg:flex lg:flex-col">
+      <aside className="hidden w-[276px] shrink-0 overflow-hidden rounded-[32px] px-5 py-6 xl:flex xl:flex-col">
         <div className="border-b border-slate-200/80 pb-5">
           <Image
             alt="Harinas Elizondo"
@@ -68,7 +102,7 @@ export function BarraLateral() {
     
       </aside>
 
-      <nav className="superficie-panel flex items-center gap-2 overflow-x-auto rounded-[28px] p-2 lg:hidden">
+      <nav className="superficie-panel flex flex-wrap items-center gap-2 rounded-[28px] p-2 xl:hidden">
         {enlaces.map((enlace) => {
           const activo =
             enlace.href === "/" ? pathname === "/" : pathname.startsWith(enlace.href);
@@ -76,7 +110,7 @@ export function BarraLateral() {
 
           return (
             <Link
-              className={`flex shrink-0 items-center gap-2 rounded-full px-4 py-2 text-sm font-medium ${
+              className={`flex min-h-11 shrink-0 items-center gap-2 rounded-full px-4 py-2 text-sm font-medium ${
                 activo
                   ? "bg-slate-950 text-white"
                   : "bg-white/80 text-slate-600"

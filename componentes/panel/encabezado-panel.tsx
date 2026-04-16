@@ -36,16 +36,45 @@ export function EncabezadoPanel({
   const pathname = usePathname();
   const esSettings = pathname.startsWith("/settings");
   const esClientes = pathname.startsWith("/clientes");
-  const seccion = esSettings ? "Settings" : esClientes ? "Clientes" : "Home";
+  const esEquipos = pathname.startsWith("/equipos");
+  const esParametros = pathname.startsWith("/parametros");
+  const esLotes = pathname.startsWith("/lotes");
+  const esInspecciones = pathname.startsWith("/inspecciones");
+  const esCertificados = pathname.startsWith("/certificados");
+  const seccion = esSettings
+    ? "Settings"
+    : esClientes
+      ? "Clientes"
+      : esEquipos
+        ? "Equipos"
+        : esParametros
+          ? "Parámetros"
+          : esLotes
+            ? "Lotes"
+            : esInspecciones
+              ? "Inspecciones"
+              : esCertificados
+                ? "Certificados"
+          : "Home";
   const titulo = esSettings
     ? "Configuración"
     : esClientes
       ? "Gestión de clientes"
+      : esEquipos
+        ? "Equipos de laboratorio"
+        : esParametros
+          ? "Catálogo de parámetros"
+          : esLotes
+            ? "Lotes de producción"
+            : esInspecciones
+              ? "Inspecciones y resultados"
+              : esCertificados
+                ? "Certificados de calidad"
       : "Dashboard";
 
   return (
     <header className="border-b border-slate-200/75 px-4 py-4 md:px-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
         <div>
           <p className="text-sm font-medium text-slate-500">
             {seccion}
@@ -56,9 +85,7 @@ export function EncabezadoPanel({
         </div>
 
         <div className="flex flex-col gap-3 md:flex-row md:items-center">
-          
-
-          <div className="flex items-center gap-2 md:justify-end">
+          <div className="flex flex-wrap items-center gap-2 md:justify-end">
             <button
               className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:text-slate-900"
               type="button"
@@ -66,7 +93,7 @@ export function EncabezadoPanel({
               <IconoCampana className="text-current" />
             </button>
 
-            <div className="flex items-center gap-3 px-3 py-2 ">
+            <div className="flex min-w-0 items-center gap-3 rounded-[20px] border border-slate-200/70 bg-white/70 px-3 py-2">
               <Avatar
                 color="indigo"
                 fallback={iniciales(nombre) || "HE"}

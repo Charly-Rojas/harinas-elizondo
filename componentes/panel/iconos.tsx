@@ -82,6 +82,135 @@ export function IconoClientes(props: Props) {
   );
 }
 
+export function IconoEquipos(props: Props) {
+  return (
+    <IconoBase {...props}>
+      <path
+        d="M9 3h6"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="1.7"
+      />
+      <path
+        d="M10 3v4.2L5 16.1A3 3 0 0 0 7.65 21h8.7A3 3 0 0 0 19 16.1L14 7.2V3"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.7"
+      />
+      <path
+        d="M8.5 14h7"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="1.7"
+      />
+    </IconoBase>
+  );
+}
+
+export function IconoParametros(props: Props) {
+  return (
+    <IconoBase {...props}>
+      <path
+        d="M5 6h14"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="1.7"
+      />
+      <path
+        d="M5 12h14"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="1.7"
+      />
+      <path
+        d="M5 18h14"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="1.7"
+      />
+      <circle cx="9" cy="6" r="2" fill="white" stroke="currentColor" strokeWidth="1.7" />
+      <circle cx="15" cy="12" r="2" fill="white" stroke="currentColor" strokeWidth="1.7" />
+      <circle cx="11" cy="18" r="2" fill="white" stroke="currentColor" strokeWidth="1.7" />
+    </IconoBase>
+  );
+}
+
+export function IconoLotes(props: Props) {
+  return (
+    <IconoBase {...props}>
+      <path
+        d="M5 8.5 12 5l7 3.5-7 3.5-7-3.5Z"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.7"
+      />
+      <path
+        d="M5 8.5V16l7 3.5 7-3.5V8.5"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.7"
+      />
+      <path
+        d="M12 12v7.5"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="1.7"
+      />
+    </IconoBase>
+  );
+}
+
+export function IconoInspecciones(props: Props) {
+  return (
+    <IconoBase {...props}>
+      <path
+        d="M9 4h8a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H9"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.7"
+      />
+      <path
+        d="M7 8h8M7 12h6M7 16h5"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="1.7"
+      />
+      <circle cx="6" cy="6" r="2" fill="white" stroke="currentColor" strokeWidth="1.7" />
+    </IconoBase>
+  );
+}
+
+export function IconoCertificados(props: Props) {
+  return (
+    <IconoBase {...props}>
+      <path
+        d="M7 4h10a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.7"
+      />
+      <path
+        d="M9 9h6M9 13h6M9 17h4"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="1.7"
+      />
+      <path
+        d="m14.5 4 1 2.2L18 7l-2.5.8-1 2.2-1-2.2L11 7l2.5-.8 1-2.2Z"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.4"
+      />
+    </IconoBase>
+  );
+}
+
 export function IconoBuscar(props: Props) {
   return (
     <IconoBase {...props}>

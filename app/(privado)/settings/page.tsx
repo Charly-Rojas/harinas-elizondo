@@ -75,7 +75,7 @@ export default async function PaginaSettings({
         </Callout.Root>
       ) : null}
 
-      <article className="tarjeta-suave rounded-[28px] p-6">
+      <article className="tarjeta-suave rounded-[28px] p-4 md:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-xl font-semibold text-slate-900">
@@ -118,7 +118,7 @@ export default async function PaginaSettings({
       </article>
 
       {!puedeAdministrar ? (
-        <article className="tarjeta-suave rounded-[28px] p-6">
+        <article className="tarjeta-suave rounded-[28px] p-4 md:p-6">
           <h2 className="text-xl font-semibold text-slate-900">
             Administración restringida
           </h2>
@@ -129,7 +129,7 @@ export default async function PaginaSettings({
           </p>
         </article>
       ) : !supabaseAdminConfigurado() ? (
-        <article className="tarjeta-suave rounded-[28px] p-6">
+        <article className="tarjeta-suave rounded-[28px] p-4 md:p-6">
           <h2 className="text-xl font-semibold text-slate-900">
             Falta la clave de servicio
           </h2>
@@ -140,7 +140,7 @@ export default async function PaginaSettings({
         </article>
       ) : (
         <>
-          <article className="tarjeta-suave rounded-[28px] p-6">
+          <article className="tarjeta-suave rounded-[28px] p-4 md:p-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h2 className="text-xl font-semibold text-slate-900">
@@ -164,7 +164,7 @@ export default async function PaginaSettings({
                 pendientes.map((perfil) => (
                   <form
                     action={aprobar_usuario}
-                    className="grid gap-4 rounded-[24px] border border-slate-200/80 bg-white/80 p-5 lg:grid-cols-[minmax(0,1fr)_180px_150px]"
+                    className="grid gap-4 rounded-[24px] border border-slate-200/80 bg-white/80 p-4 md:p-5 xl:grid-cols-[minmax(0,1fr)_180px_150px]"
                     key={perfil.id}
                   >
                     <input name="id" type="hidden" value={perfil.id} />
@@ -199,7 +199,7 @@ export default async function PaginaSettings({
             </div>
           </article>
 
-          <article className="tarjeta-suave rounded-[28px] p-6">
+          <article className="tarjeta-suave rounded-[28px] p-4 md:p-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h2 className="text-xl font-semibold text-slate-900">
@@ -209,7 +209,7 @@ export default async function PaginaSettings({
                   Cambia permisos cuando sea necesario.
                 </p>
               </div>
-              <Badge color="green" radius="full" size="2" variant="soft">
+              <Badge color="jade" radius="full" size="2" variant="soft">
                 {activos.length} activos
               </Badge>
             </div>
@@ -224,7 +224,7 @@ export default async function PaginaSettings({
                 return (
                   <form
                     action={actualizar_rol}
-                    className="grid gap-4 rounded-[24px] border border-slate-200/80 bg-white/80 p-5 lg:grid-cols-[minmax(0,1fr)_180px_150px]"
+                    className="grid gap-4 rounded-[24px] border border-slate-200/80 bg-white/80 p-4 md:p-5 xl:grid-cols-[minmax(0,1fr)_180px_150px]"
                     key={perfil.id}
                   >
                     <input name="id" type="hidden" value={perfil.id} />

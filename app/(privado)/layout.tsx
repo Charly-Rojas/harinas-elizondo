@@ -59,8 +59,8 @@ export default async function LayoutPrivado({
     usuarioActual.perfil.nombre || usuarioActual.usuario.email || "Usuario";
 
   return (
-    <div className="min-h-screen overflow-hidden p-3 md:p-5">
-      <div className="flex h-[calc(100vh-1.5rem)] w-full gap-3 md:h-[calc(100vh-2.5rem)] md:gap-5">
+    <div className="min-h-screen p-3 md:p-5 bg-[#f8f8f8]">
+      <div className="flex min-h-[calc(100vh-1.5rem)] w-full flex-col gap-3 md:min-h-[calc(100vh-2.5rem)] md:gap-5 xl:flex-row">
         <BarraLateral />
         <section className="superficie-panel flex min-w-0 flex-1 flex-col overflow-hidden rounded-[32px]">
           <EncabezadoPanel
