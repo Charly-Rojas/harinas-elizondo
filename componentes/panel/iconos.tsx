@@ -256,3 +256,29 @@ export function IconoSalir(props: Props) {
     </IconoBase>
   );
 }
+
+export function IconoMenu(props: Props) {
+  return (
+    <IconoBase {...props}>
+      <path
+        d="M4 7h16M4 12h16M4 17h16"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="1.8"
+      />
+    </IconoBase>
+  );
+}
+
+export function IconoCerrar(props: Props) {
+  return (
+    <IconoBase {...props}>
+      <path
+        d="M6 6l12 12M18 6 6 18"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="1.8"
+      />
+    </IconoBase>
+  );
+}
