@@ -4,7 +4,11 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requiere_sesion } from "@/lib/autorizacion";
 import { registrarAuditoria } from "@/lib/auditoria";
-import { guardarPdfCertificado } from "@/lib/certificados";
+import {
+  descargarPdfCertificado,
+  guardarPdfCertificado,
+  obtenerCertificadoDetalleConCliente,
+} from "@/lib/certificados";
 import {
   correoConfigurado,
   enviarCorreoCertificado,
@@ -25,6 +29,19 @@ function numeroOpcional(valor: string) {
   if (!valor) return null;
   const numero = Number(valor);
   return Number.isFinite(numero) ? numero : null;
+}
+
+function redirigirDetalleCertificado(
+  idCertificado: number,
+  tipo: "exito" | "error",
+  mensaje: string
+): never {
+  const parametros = new URLSearchParams({
+    tipo,
+    mensaje,
+  });
+
+  redirect(`/certificados/${idCertificado}?${parametros.toString()}`);
 }
 
 async function generarFolioCertificado(
@@ -344,4 +361,153 @@ export async function crear_certificado(
   revalidatePath("/inspecciones");
   revalidatePath(`/certificados/${certificado.id_certificado}`);
   redirect(`/certificados/${certificado.id_certificado}`);
+}
+
+export async function enviar_certificado_cliente(formData: FormData) {
+  const usuario = await requiere_sesion();
+  const idCertificado = parseInt(limpiar(formData.get("id_certificado")), 10);
+
+  if (!idCertificado) {
+    redirect("/certificados");
+  }
+
+  if (!correoConfigurado()) {
+    redirigirDetalleCertificado(
+      idCertificado,
+      "error",
+      "SMTP no está configurado para enviar correos."
+    );
+  }
+
+  const supabase = await crearClienteServidor();
+  const certificado = await obtenerCertificadoDetalleConCliente(
+    supabase,
+    idCertificado
+  );
+
+  if (!certificado) {
+    redirigirDetalleCertificado(
+      idCertificado,
+      "error",
+      "No se encontró el certificado seleccionado."
+    );
+  }
+
+  const cliente = Array.isArray(certificado.clientes)
+    ? certificado.clientes[0]
+    : certificado.clientes;
+  const lote = Array.isArray(certificado.lotes_produccion)
+    ? certificado.lotes_produccion[0]
+    : certificado.lotes_produccion;
+  const inspeccion = Array.isArray(certificado.inspecciones)
+    ? certificado.inspecciones[0]
+    : certificado.inspecciones;
+
+  const destinatarios = normalizarDestinatarios([
+    certificado.correo_cliente,
+    certificado.correo_almacen,
+  ]);
+
+  if (!destinatarios.length) {
+    redirigirDetalleCertificado(
+      idCertificado,
+      "error",
+      "El certificado no tiene correos de destino configurados."
+    );
+  }
+
+  let pdfContenido: Uint8Array | null = null;
+
+  if (
+    certificado.pdf_storage_path &&
+    !certificado.pdf_storage_path.startsWith("/")
+  ) {
+    pdfContenido = await descargarPdfCertificado(certificado.pdf_storage_path);
+  }
+
+  if (!pdfContenido) {
+    pdfContenido = await generarPdfCertificado(
+      construirPayloadPdfCertificado(certificado)
+    );
+  }
+
+  const pdfNombre =
+    certificado.pdf_nombre_archivo ||
+    `${certificado.folio || `certificado-${certificado.id_certificado}`}.pdf`;
+
+  try {
+    await enviarCorreoCertificado({
+      folio: certificado.folio || `CERT-${certificado.id_certificado}`,
+      cliente: cliente?.nombre || `Cliente ${certificado.id_cliente}`,
+      lote: lote?.numero_lote || `Lote ${certificado.id_lote}`,
+      secuencia: inspeccion?.secuencia || "-",
+      destinatarios,
+      numeroFactura: certificado.numero_factura,
+      fechaEnvio: certificado.fecha_envio,
+      totalResultados: certificado.certificado_resultados.length,
+      fueraEspecificacion: certificado.certificado_resultados.filter(
+        (resultado) => resultado.dentro_especificacion === false
+      ).length,
+      pdfNombre,
+      pdfContenido,
+    });
+
+    await supabase
+      .from("certificados_calidad")
+      .update({
+        status_envio: "enviado",
+        actualizado_por: usuario.usuario.id,
+      })
+      .eq("id_certificado", idCertificado);
+
+    await registrarAuditoria(supabase, {
+      entidad: "certificados_calidad",
+      entidadId: String(idCertificado),
+      accion: "envio_manual",
+      descripcion: `Envío manual del certificado ${certificado.folio || `#${idCertificado}`}.`,
+      valoresNuevos: {
+        destinatarios,
+      },
+      usuarioId: usuario.usuario.id,
+    });
+
+    revalidatePath("/certificados");
+    revalidatePath(`/certificados/${idCertificado}`);
+    redirigirDetalleCertificado(
+      idCertificado,
+      "exito",
+      "Certificado enviado correctamente."
+    );
+  } catch (errorEnvio) {
+    console.error("[certificados][correo][manual]", errorEnvio);
+
+    await supabase
+      .from("certificados_calidad")
+      .update({
+        status_envio: "fallido",
+        actualizado_por: usuario.usuario.id,
+      })
+      .eq("id_certificado", idCertificado);
+
+    await registrarAuditoria(supabase, {
+      entidad: "certificados_calidad",
+      entidadId: String(idCertificado),
+      accion: "envio_manual_fallido",
+      descripcion: `Fallo el envío manual del certificado ${certificado.folio || `#${idCertificado}`}.`,
+      valoresNuevos: {
+        destinatarios,
+      },
+      motivo:
+        errorEnvio instanceof Error ? errorEnvio.message : "Error desconocido",
+      usuarioId: usuario.usuario.id,
+    });
+
+    revalidatePath("/certificados");
+    revalidatePath(`/certificados/${idCertificado}`);
+    redirigirDetalleCertificado(
+      idCertificado,
+      "error",
+      "No fue posible enviar el certificado."
+    );
+  }
 }

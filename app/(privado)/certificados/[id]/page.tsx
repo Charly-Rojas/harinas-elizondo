@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Badge } from "@radix-ui/themes";
+import { Badge, Button, Callout } from "@radix-ui/themes";
+import { enviar_certificado_cliente } from "@/app/(privado)/certificados/acciones";
 import { BotonImprimir } from "@/componentes/panel/boton-imprimir";
 import { crearClienteServidor } from "@/lib/supabase/servidor";
 import type { CertificadoConRelaciones } from "@/lib/tipos-dominio";
@@ -14,11 +15,21 @@ function formatNumber(valor: number | null) {
 
 export default async function PaginaDetalleCertificado({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{
+    tipo?: string | string[];
+    mensaje?: string | string[];
+  }>;
 }) {
   const { id } = await params;
+  const parametros = await searchParams;
   const idCertificado = Number(id);
+  const tipo =
+    typeof parametros.tipo === "string" ? parametros.tipo : undefined;
+  const mensaje =
+    typeof parametros.mensaje === "string" ? parametros.mensaje : undefined;
 
   if (!idCertificado) {
     notFound();
@@ -45,6 +56,16 @@ export default async function PaginaDetalleCertificado({
 
   return (
     <section className="flex flex-col gap-5">
+      {mensaje ? (
+        <Callout.Root
+          color={tipo === "error" ? "red" : "green"}
+          size="2"
+          variant="soft"
+        >
+          <Callout.Text>{mensaje}</Callout.Text>
+        </Callout.Root>
+      ) : null}
+
       <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
         <div>
           <p className="text-sm font-medium text-slate-500">Certificados</p>
@@ -66,6 +87,16 @@ export default async function PaginaDetalleCertificado({
           >
             Abrir PDF
           </Link>
+          <form action={enviar_certificado_cliente}>
+            <input
+              name="id_certificado"
+              type="hidden"
+              value={certificado.id_certificado}
+            />
+            <Button size="2" type="submit" variant="soft">
+              Enviar al cliente
+            </Button>
+          </form>
           <BotonImprimir />
         </div>
       </div>
