@@ -5,6 +5,7 @@ import {
   IconoInspecciones,
   IconoLotes,
   IconoParametros,
+  IconoProductos,
   IconoSettings,
 } from "@/componentes/panel/iconos";
 
@@ -13,7 +14,7 @@ export default function PaginaHome() {
     <section className="flex min-h-full flex-col gap-5">
       
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-7">
         <Link
           className="tarjeta-suave rounded-[24px] p-5 transition hover:-translate-y-0.5"
           href="/clientes"
@@ -26,6 +27,21 @@ export default function PaginaHome() {
           </h2>
           <p className="mt-2 text-sm leading-6 text-slate-500">
             Alta, actualización de datos y control de clientes con certificado.
+          </p>
+        </Link>
+
+        <Link
+          className="tarjeta-suave rounded-[24px] p-5 transition hover:-translate-y-0.5"
+          href="/productos"
+        >
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-violet-50 text-violet-600">
+            <IconoProductos />
+          </div>
+          <h2 className="mt-4 text-lg font-semibold text-slate-900">
+            Productos
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-slate-500">
+            Catálogo de productos para asociar lotes y mantener consistencia.
           </p>
         </Link>
 

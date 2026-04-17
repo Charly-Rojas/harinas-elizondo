@@ -6,6 +6,7 @@ import {
   IconoInspecciones,
   IconoLotes,
   IconoParametros,
+  IconoProductos,
   IconoSettings,
 } from "@/componentes/panel/iconos";
 
@@ -19,6 +20,11 @@ export const enlacesPanel = [
     href: "/clientes",
     etiqueta: "Clientes",
     icono: IconoClientes,
+  },
+  {
+    href: "/productos",
+    etiqueta: "Productos",
+    icono: IconoProductos,
   },
   {
     href: "/equipos",
@@ -75,6 +81,13 @@ export function obtenerContextoRuta(pathname: string) {
     return {
       seccion: "Equipos",
       titulo: "Equipos de laboratorio",
+    };
+  }
+
+  if (pathname.startsWith("/productos")) {
+    return {
+      seccion: "Productos",
+      titulo: "Catálogo de productos",
     };
   }
 

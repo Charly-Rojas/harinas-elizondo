@@ -82,6 +82,33 @@ export function IconoClientes(props: Props) {
   );
 }
 
+export function IconoProductos(props: Props) {
+  return (
+    <IconoBase {...props}>
+      <path
+        d="M12 3 19 6.5v11L12 21l-7-3.5v-11L12 3Z"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.7"
+      />
+      <path
+        d="M5 6.5 12 10l7-3.5"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.7"
+      />
+      <path
+        d="M12 10v11"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="1.7"
+      />
+    </IconoBase>
+  );
+}
+
 export function IconoEquipos(props: Props) {
   return (
     <IconoBase {...props}>
