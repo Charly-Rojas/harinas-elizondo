@@ -20,6 +20,11 @@ export async function GET(request: NextRequest) {
     });
 
     if (!error) {
+      if (type === "recovery") {
+        destino.pathname = "/restablecer";
+        return NextResponse.redirect(destino);
+      }
+
       return NextResponse.redirect(destino);
     }
   }

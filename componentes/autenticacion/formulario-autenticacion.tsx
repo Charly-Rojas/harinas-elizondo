@@ -6,6 +6,7 @@ import { useActionState, useMemo, useState } from "react";
 import {
   iniciar_sesion,
   registrar_usuario,
+  solicitar_recuperacion,
   type EstadoFormularioAutenticacion,
 } from "@/app/acciones/autenticacion";
 import { BotonEnvio } from "@/componentes/autenticacion/boton-envio";
@@ -17,7 +18,9 @@ export function FormularioAutenticacion({
 }: {
   errorInicial?: string;
 }) {
-  const [modo, setModo] = useState<"login" | "registro">("login");
+  const [modo, setModo] = useState<"login" | "registro" | "recuperar">(
+    "login"
+  );
   const [estadoLogin, accionLogin] = useActionState(
     iniciar_sesion,
     estadoInicial
@@ -26,14 +29,26 @@ export function FormularioAutenticacion({
     registrar_usuario,
     estadoInicial
   );
+  const [estadoRecuperacion, accionRecuperacion] = useActionState(
+    solicitar_recuperacion,
+    estadoInicial
+  );
 
   const estadoVisible = useMemo(() => {
-    if (errorInicial) {
+    if (errorInicial && modo === "login") {
       return { error: errorInicial };
     }
 
-    return modo === "login" ? estadoLogin : estadoRegistro;
-  }, [estadoLogin, estadoRegistro, modo, errorInicial]);
+    if (modo === "registro") {
+      return estadoRegistro;
+    }
+
+    if (modo === "recuperar") {
+      return estadoRecuperacion;
+    }
+
+    return estadoLogin;
+  }, [estadoLogin, estadoRecuperacion, estadoRegistro, errorInicial, modo]);
 
   return (
     <Card className="w-full max-w-[520px] rounded-[32px] p-3 shadow-none md:p-4">
@@ -53,35 +68,47 @@ export function FormularioAutenticacion({
           <div className="flex items-center justify-between gap-4">
             <div>
               <h2 className="mt-3 text-2xl font-semibold tracking-tight text-slate-950">
-                {modo === "login" ? "Iniciar sesión" : "Crear cuenta"}
+                {modo === "login"
+                  ? "Iniciar sesión"
+                  : modo === "registro"
+                    ? "Crear cuenta"
+                    : "Recuperar contraseña"}
               </h2>
+              {modo === "recuperar" ? (
+                <p className="mt-2 max-w-md text-sm leading-6 text-slate-500">
+                  Ingresa tu correo y te enviaremos un enlace para restablecer
+                  tu contraseña
+                </p>
+              ) : null}
             </div>
-            <div className="rounded-full border border-slate-200 bg-slate-50 p-1">
-              <button
-                className={`rounded-full px-4 py-2 text-sm font-medium transition ${
-                  modo === "login"
-                    ? "bg-indigo-950 text-white"
-                    : "text-slate-500 hover:text-slate-800"
-                }`}
-                onClick={() => setModo("login")}
-                type="button"
-              >
-                Login
-              </button>
-              <button
-                className={`rounded-full px-4 py-2 text-sm font-medium transition ${
-                  modo === "registro"
-                    ? "bg-indigo-950 text-white"
-                    : "text-slate-500 hover:text-slate-800"
-                }`}
-                onClick={() => setModo("registro")}
-                type="button"
-              >
-                Registro
-              </button>
-            </div>
-          </div>
 
+            {modo !== "recuperar" && (
+              <div className="rounded-full border border-slate-200 bg-slate-50 p-1">
+                <button
+                  className={`rounded-full px-4 py-2 text-sm font-medium transition ${
+                    modo === "login"
+                      ? "bg-indigo-950 text-white"
+                      : "text-slate-500 hover:text-slate-800"
+                  }`}
+                  onClick={() => setModo("login")}
+                  type="button"
+                >
+                  Login
+                </button>
+                <button
+                  className={`rounded-full px-4 py-2 text-sm font-medium transition ${
+                    modo === "registro"
+                      ? "bg-indigo-950 text-white"
+                      : "text-slate-500 hover:text-slate-800"
+                  }`}
+                  onClick={() => setModo("registro")}
+                  type="button"
+                >
+                  Registro
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
         {estadoVisible.error ? (
@@ -117,7 +144,7 @@ export function FormularioAutenticacion({
               <input
                 className="campo-formulario"
                 name="contrasena"
-                placeholder="••••••••"
+                placeholder="********"
                 required
                 type="password"
               />
@@ -125,8 +152,15 @@ export function FormularioAutenticacion({
             <div className="pt-2">
               <BotonEnvio texto="Entrar" textoPendiente="Entrando..." />
             </div>
+            <button
+              className="mt-3 block cursor-pointer text-center text-sm text-indigo-600 hover:text-indigo-800"
+              onClick={() => setModo("recuperar")}
+              type="button"
+            >
+              ¿Olvidaste tu contraseña?
+            </button>
           </form>
-        ) : (
+        ) : modo === "registro" ? (
           <form action={accionRegistro} className="mt-6 space-y-4">
             <label className="block">
               <span className="mb-2 block text-sm font-medium text-slate-600">
@@ -168,6 +202,31 @@ export function FormularioAutenticacion({
             <div className="pt-2">
               <BotonEnvio texto="Crear cuenta" textoPendiente="Creando..." />
             </div>
+          </form>
+        ) : (
+          <form action={accionRecuperacion} className="mt-6 space-y-4">
+            <label className="block">
+              <span className="mb-2 block text-sm font-medium text-slate-600">
+                Correo
+              </span>
+              <input
+                className="campo-formulario"
+                name="correo"
+                placeholder="tu@correo.com"
+                required
+                type="email"
+              />
+            </label>
+            <div className="pt-2">
+              <BotonEnvio texto="Enviar enlace" textoPendiente="Enviando..." />
+            </div>
+            <button
+              className="mt-3 block cursor-pointer text-center text-sm text-indigo-600 hover:text-indigo-800"
+              onClick={() => setModo("login")}
+              type="button"
+            >
+              Volver al login
+            </button>
           </form>
         )}
       </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
+import { useActionState } from "react";
 import { Badge, Button } from "@radix-ui/themes";
 import {
   crear_equipo,
@@ -9,21 +9,10 @@ import {
 } from "@/app/(privado)/equipos/acciones";
 import type {
   EquipoConRelaciones,
-  ParametroCalidad,
   TipoEquipo,
 } from "@/lib/tipos-dominio";
 
 const estadoInicial: EstadoFormularioEquipo = {};
-
-type AsociacionEquipoFila = {
-  id_parametro: string;
-  desviacion_permitida: string;
-  lim_min_internacional: string;
-  lim_max_internacional: string;
-  especificacion_interna: string;
-};
-
-type OpcionParametro = Pick<ParametroCalidad, "id_parametro" | "clave" | "nombre" | "activo">;
 
 const tiposEquipo: Array<{ valor: TipoEquipo; etiqueta: string }> = [
   { valor: "alveografo", etiqueta: "Alveógrafo" },
@@ -34,63 +23,13 @@ const tiposEquipo: Array<{ valor: TipoEquipo; etiqueta: string }> = [
 export function FormularioEquipo({
   equipo,
   onCancelar,
-  parametrosDisponibles,
 }: {
   equipo?: EquipoConRelaciones;
   onCancelar: () => void;
-  parametrosDisponibles: OpcionParametro[];
 }) {
   const esEdicion = Boolean(equipo);
   const accion = esEdicion ? editar_equipo : crear_equipo;
   const [estado, ejecutar] = useActionState(accion, estadoInicial);
-  const asociacionesIniciales = useMemo<AsociacionEquipoFila[]>(
-    () =>
-      equipo?.equipos_parametros?.length
-        ? equipo.equipos_parametros.map((asociacion) => ({
-            id_parametro: String(asociacion.id_parametro),
-            desviacion_permitida:
-              asociacion.desviacion_permitida?.toString() ?? "",
-            lim_min_internacional:
-              asociacion.lim_min_internacional?.toString() ?? "",
-            lim_max_internacional:
-              asociacion.lim_max_internacional?.toString() ?? "",
-            especificacion_interna: asociacion.especificacion_interna ?? "",
-          }))
-        : [],
-    [equipo]
-  );
-  const [asociaciones, setAsociaciones] = useState<AsociacionEquipoFila[]>(
-    asociacionesIniciales
-  );
-
-  function actualizarFila(
-    indice: number,
-    campo: keyof AsociacionEquipoFila,
-    valor: string
-  ) {
-    setAsociaciones((actuales) =>
-      actuales.map((fila, i) =>
-        i === indice ? { ...fila, [campo]: valor } : fila
-      )
-    );
-  }
-
-  function agregarFila() {
-    setAsociaciones((actuales) => [
-      ...actuales,
-      {
-        id_parametro: "",
-        desviacion_permitida: "",
-        lim_min_internacional: "",
-        lim_max_internacional: "",
-        especificacion_interna: "",
-      },
-    ]);
-  }
-
-  function eliminarFila(indice: number) {
-    setAsociaciones((actuales) => actuales.filter((_, i) => i !== indice));
-  }
 
   return (
     <article className="tarjeta-suave rounded-[28px] p-4 md:p-6">
@@ -100,8 +39,7 @@ export function FormularioEquipo({
             {esEdicion ? "Editar equipo" : "Nuevo equipo"}
           </h2>
           <p className="mt-1 text-sm text-slate-500">
-            Captura datos generales del equipo y su configuración base de
-            parámetros.
+            Captura los datos generales del equipo.
           </p>
         </div>
         <Badge color="jade" radius="full" size="2" variant="soft">
@@ -116,12 +54,6 @@ export function FormularioEquipo({
       ) : null}
 
       <form action={ejecutar} className="mt-6 space-y-4">
-        <input
-          name="asociaciones_json"
-          type="hidden"
-          value={JSON.stringify(asociaciones)}
-        />
-
         {esEdicion ? (
           <input name="id_equipo" type="hidden" value={equipo!.id_equipo} />
         ) : null}
@@ -312,151 +244,6 @@ export function FormularioEquipo({
             />
           </label>
         </div>
-
-        <section className="rounded-[24px] border border-slate-200/80 bg-white/70 p-4 md:p-5">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h3 className="text-base font-semibold text-slate-900">
-                Parámetros asociados
-              </h3>
-              <p className="mt-1 text-sm text-slate-500">
-                Define qué parámetros mide el equipo y sus límites base.
-              </p>
-            </div>
-            <Button onClick={agregarFila} size="2" type="button" variant="soft">
-              + Asociar parámetro
-            </Button>
-          </div>
-
-          {asociaciones.length === 0 ? (
-            <div className="mt-4 rounded-[18px] border border-dashed border-slate-200 bg-slate-50/80 px-4 py-3 text-sm text-slate-500">
-              Aún no hay parámetros asociados a este equipo.
-            </div>
-          ) : (
-            <div className="mt-4 space-y-3">
-              {asociaciones.map((asociacion, indice) => (
-                <div
-                  className="rounded-[20px] border border-slate-200/80 bg-white p-4"
-                  key={`${asociacion.id_parametro}-${indice}`}
-                >
-                  <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-                    <label className="block">
-                      <span className="mb-2 block text-xs font-medium uppercase tracking-wide text-slate-500">
-                        Parámetro
-                      </span>
-                      <select
-                        className="campo-formulario"
-                        onChange={(event) =>
-                          actualizarFila(indice, "id_parametro", event.target.value)
-                        }
-                        value={asociacion.id_parametro}
-                      >
-                        <option value="">Selecciona un parámetro</option>
-                        {parametrosDisponibles.map((parametro) => (
-                          <option
-                            key={parametro.id_parametro}
-                            value={parametro.id_parametro}
-                          >
-                            {parametro.clave} - {parametro.nombre}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-
-                    <label className="block">
-                      <span className="mb-2 block text-xs font-medium uppercase tracking-wide text-slate-500">
-                        Desviación
-                      </span>
-                      <input
-                        className="campo-formulario"
-                        onChange={(event) =>
-                          actualizarFila(
-                            indice,
-                            "desviacion_permitida",
-                            event.target.value
-                          )
-                        }
-                        placeholder="0.5000"
-                        step="0.0001"
-                        type="number"
-                        value={asociacion.desviacion_permitida}
-                      />
-                    </label>
-
-                    <label className="block">
-                      <span className="mb-2 block text-xs font-medium uppercase tracking-wide text-slate-500">
-                        Límite mínimo
-                      </span>
-                      <input
-                        className="campo-formulario"
-                        onChange={(event) =>
-                          actualizarFila(
-                            indice,
-                            "lim_min_internacional",
-                            event.target.value
-                          )
-                        }
-                        placeholder="180"
-                        step="0.0001"
-                        type="number"
-                        value={asociacion.lim_min_internacional}
-                      />
-                    </label>
-
-                    <label className="block">
-                      <span className="mb-2 block text-xs font-medium uppercase tracking-wide text-slate-500">
-                        Límite máximo
-                      </span>
-                      <input
-                        className="campo-formulario"
-                        onChange={(event) =>
-                          actualizarFila(
-                            indice,
-                            "lim_max_internacional",
-                            event.target.value
-                          )
-                        }
-                        placeholder="240"
-                        step="0.0001"
-                        type="number"
-                        value={asociacion.lim_max_internacional}
-                      />
-                    </label>
-
-                    <label className="block">
-                      <span className="mb-2 block text-xs font-medium uppercase tracking-wide text-slate-500">
-                        Especificación interna
-                      </span>
-                      <div className="flex gap-2">
-                        <input
-                          className="campo-formulario"
-                          onChange={(event) =>
-                            actualizarFila(
-                              indice,
-                              "especificacion_interna",
-                              event.target.value
-                            )
-                          }
-                          placeholder="Norma interna FHESA"
-                          type="text"
-                          value={asociacion.especificacion_interna}
-                        />
-                        <Button
-                          color="red"
-                          onClick={() => eliminarFila(indice)}
-                          type="button"
-                          variant="soft"
-                        >
-                          Quitar
-                        </Button>
-                      </div>
-                    </label>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
 
         <div className="flex flex-wrap items-center gap-3 pt-2">
           <Button size="3" type="submit">

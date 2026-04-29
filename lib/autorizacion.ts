@@ -20,13 +20,26 @@ export function es_administrador(rol: RolUsuario) {
   return rol === "admin" || rol === "superadmin";
 }
 
+export function es_gerente(rol: RolUsuario) {
+  return (
+    rol === "gte_calidad" ||
+    rol === "gte_plantas" ||
+    rol === "dir_operaciones"
+  );
+}
+
 export function puede_asignar_rol(rolActor: RolUsuario, rolObjetivo: RolUsuario) {
   if (rolActor === "superadmin") {
     return true;
   }
 
   if (rolActor === "admin") {
-    return rolObjetivo === "admin" || rolObjetivo === "operador";
+    return (
+      rolObjetivo === "gte_calidad" ||
+      rolObjetivo === "gte_plantas" ||
+      rolObjetivo === "dir_operaciones" ||
+      rolObjetivo === "operador"
+    );
   }
 
   return false;

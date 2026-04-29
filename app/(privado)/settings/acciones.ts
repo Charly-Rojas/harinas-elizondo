@@ -22,7 +22,14 @@ function redirigirConMensaje(
 }
 
 function obtenerRolDesdeFormulario(valor: FormDataEntryValue | null): RolUsuario | null {
-  if (valor === "superadmin" || valor === "admin" || valor === "operador") {
+  if (
+    valor === "superadmin" ||
+    valor === "admin" ||
+    valor === "gte_calidad" ||
+    valor === "gte_plantas" ||
+    valor === "dir_operaciones" ||
+    valor === "operador"
+  ) {
     return valor;
   }
 
@@ -146,3 +153,10 @@ export async function actualizar_rol(formData: FormData) {
   revalidatePath("/settings");
   redirigirConMensaje("exito", "Rol actualizado correctamente.");
 }
+
+/*
+SQL manual para ejecutar en Supabase SQL Editor:
+
+ALTER TABLE perfiles DROP CONSTRAINT IF EXISTS perfiles_rol_check;
+ALTER TABLE perfiles ADD CONSTRAINT perfiles_rol_check CHECK (rol IN ('superadmin', 'admin', 'gte_calidad', 'gte_plantas', 'dir_operaciones', 'operador'));
+*/

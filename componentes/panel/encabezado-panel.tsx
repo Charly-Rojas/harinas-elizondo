@@ -1,15 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { Avatar, Badge, Button } from "@radix-ui/themes";
+import { createElement, useEffect, useState } from "react";
+import { Badge, Button } from "@radix-ui/themes";
 import { usePathname } from "next/navigation";
 import { cerrar_sesion } from "@/app/acciones/autenticacion";
 import {
   IconoCampana,
   IconoCerrar,
+  IconoGreatBall,
+  IconoMasterBall,
   IconoMenu,
+  IconoPokeballNormal,
+  IconoPremierBall,
+  IconoSafariBall,
   IconoSalir,
+  IconoUltraBall,
 } from "@/componentes/panel/iconos";
 import {
   enlacesPanel,
@@ -18,19 +24,24 @@ import {
 } from "@/componentes/panel/navegacion-panel";
 import type { RolUsuario } from "@/lib/tipos";
 
-function iniciales(nombre: string) {
-  return nombre
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((parte) => parte[0]?.toUpperCase() ?? "")
-    .join("");
-}
-
 function obtenerColorRol(rol: RolUsuario) {
   if (rol === "superadmin") return "indigo";
   if (rol === "admin") return "blue";
   return "gray";
+}
+
+function obtenerIconoRol(rol: RolUsuario) {
+  const iconos: Record<RolUsuario, React.ComponentType<{ className?: string }>> =
+    {
+      superadmin: IconoMasterBall,
+      admin: IconoUltraBall,
+      gte_calidad: IconoGreatBall,
+      gte_plantas: IconoSafariBall,
+      dir_operaciones: IconoPremierBall,
+      operador: IconoPokeballNormal,
+    };
+
+  return iconos[rol] || IconoPokeballNormal;
 }
 
 export function EncabezadoPanel({
@@ -45,6 +56,7 @@ export function EncabezadoPanel({
   const pathname = usePathname();
   const [menuAbierto, setMenuAbierto] = useState(false);
   const { seccion, titulo } = obtenerContextoRuta(pathname);
+  const iconoPokeball = obtenerIconoRol(rol);
 
   useEffect(() => {
     if (!menuAbierto) {
@@ -115,12 +127,9 @@ export function EncabezadoPanel({
               </button>
 
               <div className="hidden min-w-0 items-center gap-3 rounded-[20px] border border-slate-200/70 bg-white/70 px-3 py-2 md:flex">
-                <Avatar
-                  color="indigo"
-                  fallback={iniciales(nombre) || "HE"}
-                  radius="full"
-                  size="2"
-                />
+                <div className="flex h-10 w-10 items-center justify-center">
+                  {createElement(iconoPokeball, { className: "h-8 w-8" })}
+                </div>
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold text-slate-900">
                     {nombre}
@@ -206,12 +215,9 @@ export function EncabezadoPanel({
 
             <div className="mt-5 rounded-[24px] border border-slate-200/80 bg-white p-4">
               <div className="flex items-center gap-3">
-                <Avatar
-                  color="indigo"
-                  fallback={iniciales(nombre) || "HE"}
-                  radius="full"
-                  size="3"
-                />
+                <div className="flex h-12 w-12 items-center justify-center">
+                  {createElement(iconoPokeball, { className: "h-10 w-10" })}
+                </div>
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold text-slate-900">
                     {nombre}

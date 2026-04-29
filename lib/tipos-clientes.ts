@@ -10,7 +10,6 @@ export type Cliente = {
   correo_contacto_cliente: string | null;
   correo_almacenista: string | null;
   correo_gte_calidad: string | null;
-  documento_especificaciones: string | null;
   solicita_certificado: boolean;
   usa_especificaciones_cliente: boolean;
   status: EstadoCliente;
