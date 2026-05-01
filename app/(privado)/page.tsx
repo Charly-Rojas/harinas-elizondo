@@ -37,6 +37,14 @@ type InspeccionReciente = Pick<
   clientes?: Pick<Cliente, "id_cliente" | "nombre"> | null;
 };
 
+type InspeccionRecienteQueryRow = Pick<
+  Inspeccion,
+  "id_inspeccion" | "fecha_inspeccion" | "secuencia" | "status"
+> & {
+  lotes_produccion?: Array<Pick<LoteProduccion, "numero_lote">> | null;
+  clientes?: Array<Pick<Cliente, "id_cliente" | "nombre">> | null;
+};
+
 type CertificadoReciente = Pick<
   CertificadoCalidad,
   "id_certificado" | "folio" | "status_certificado" | "status_envio"
@@ -46,6 +54,20 @@ type CertificadoReciente = Pick<
     | (Pick<LoteProduccion, "numero_lote"> & {
         productos?: Pick<Producto, "nombre"> | null;
       })
+    | null;
+};
+
+type CertificadoRecienteQueryRow = Pick<
+  CertificadoCalidad,
+  "id_certificado" | "folio" | "status_certificado" | "status_envio"
+> & {
+  clientes?: Array<Pick<Cliente, "id_cliente" | "nombre">> | null;
+  lotes_produccion?:
+    | Array<
+        Pick<LoteProduccion, "numero_lote"> & {
+          productos?: Array<Pick<Producto, "nombre">> | null;
+        }
+      >
     | null;
 };
 
@@ -62,6 +84,10 @@ function obtenerPrimerDiaMesActual() {
   const anio = hoy.getFullYear();
   const mes = String(hoy.getMonth() + 1).padStart(2, "0");
   return `${anio}-${mes}-01`;
+}
+
+function obtenerPrimerElemento<T>(registros?: T[] | null) {
+  return registros?.[0] ?? null;
 }
 
 function formatearFecha(fecha: string | null | undefined) {
@@ -225,10 +251,35 @@ export default function PaginaHome() {
           certificadosPendientesEnvio: certificadosPendientesEnvioQuery.count ?? 0,
         });
         setInspeccionesRecientes(
-          (inspeccionesRecientesQuery.data ?? []) as InspeccionReciente[]
+          ((inspeccionesRecientesQuery.data ?? []) as InspeccionRecienteQueryRow[]).map(
+            (inspeccion) => ({
+              ...inspeccion,
+              lotes_produccion: obtenerPrimerElemento(
+                inspeccion.lotes_produccion
+              ),
+              clientes: obtenerPrimerElemento(inspeccion.clientes),
+            })
+          )
         );
         setCertificadosRecientes(
-          (certificadosRecientesQuery.data ?? []) as CertificadoReciente[]
+          ((certificadosRecientesQuery.data ?? []) as CertificadoRecienteQueryRow[]).map(
+            (certificado) => {
+              const loteProduccion = obtenerPrimerElemento(
+                certificado.lotes_produccion
+              );
+
+              return {
+                ...certificado,
+                clientes: obtenerPrimerElemento(certificado.clientes),
+                lotes_produccion: loteProduccion
+                  ? {
+                      ...loteProduccion,
+                      productos: obtenerPrimerElemento(loteProduccion.productos),
+                    }
+                  : null,
+              };
+            }
+          )
         );
       } catch {
         if (!cancelado) {
