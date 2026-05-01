@@ -1,4 +1,10 @@
-export type RolUsuario = "superadmin" | "admin" | "operador";
+export type RolUsuario =
+  | "superadmin"
+  | "admin"
+  | "gte_calidad"
+  | "gte_plantas"
+  | "dir_operaciones"
+  | "operador";
 
 export type PerfilUsuario = {
   id: string;

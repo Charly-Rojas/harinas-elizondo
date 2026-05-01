@@ -15,12 +15,18 @@ import { supabaseAdminConfigurado } from "@/lib/supabase/configuracion";
 function obtenerTextoRol(rol: PerfilUsuario["rol"]) {
   if (rol === "superadmin") return "Superadmin";
   if (rol === "admin") return "Admin";
+  if (rol === "gte_calidad") return "Gte. Aseg. Calidad";
+  if (rol === "gte_plantas") return "Gte. Plantas";
+  if (rol === "dir_operaciones") return "Dir. Operaciones";
   return "Operador";
 }
 
 function obtenerColorRol(rol: PerfilUsuario["rol"]) {
   if (rol === "superadmin") return "indigo";
   if (rol === "admin") return "blue";
+  if (rol === "gte_calidad") return "violet";
+  if (rol === "gte_plantas") return "teal";
+  if (rol === "dir_operaciones") return "amber";
   return "gray";
 }
 
@@ -182,7 +188,12 @@ export default async function PaginaSettings({
                         name="rol"
                       >
                         <option value="operador">Operador</option>
-                        <option value="admin">Admin</option>
+                        <option value="gte_calidad">Gte. Aseg. Calidad</option>
+                        <option value="gte_plantas">Gte. Plantas</option>
+                        <option value="dir_operaciones">Dir. Operaciones</option>
+                        {puede_asignar_rol(usuarioActual.perfil.rol, "admin") ? (
+                          <option value="admin">Admin</option>
+                        ) : null}
                         {usuarioActual.perfil.rol === "superadmin" ? (
                           <option value="superadmin">Superadmin</option>
                         ) : null}
@@ -261,7 +272,12 @@ export default async function PaginaSettings({
                         name="rol"
                       >
                         <option value="operador">Operador</option>
-                        <option value="admin">Admin</option>
+                        <option value="gte_calidad">Gte. Aseg. Calidad</option>
+                        <option value="gte_plantas">Gte. Plantas</option>
+                        <option value="dir_operaciones">Dir. Operaciones</option>
+                        {puede_asignar_rol(usuarioActual.perfil.rol, "admin") ? (
+                          <option value="admin">Admin</option>
+                        ) : null}
                         {puede_asignar_rol(usuarioActual.perfil.rol, "superadmin") ? (
                           <option value="superadmin">Superadmin</option>
                         ) : null}

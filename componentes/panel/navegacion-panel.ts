@@ -7,7 +7,7 @@ import {
   IconoLotes,
   IconoParametros,
   IconoProductos,
-  IconoSettings,
+  IconoUsuario,
 } from "@/componentes/panel/iconos";
 
 export const enlacesPanel = [
@@ -53,8 +53,8 @@ export const enlacesPanel = [
   },
   {
     href: "/settings",
-    etiqueta: "Settings",
-    icono: IconoSettings,
+    etiqueta: "Usuario",
+    icono: IconoUsuario,
   },
 ] as const;
 
@@ -65,8 +65,8 @@ export function rutaActiva(pathname: string, href: string) {
 export function obtenerContextoRuta(pathname: string) {
   if (pathname.startsWith("/settings")) {
     return {
-      seccion: "Settings",
-      titulo: "Configuración",
+      seccion: "Usuario",
+      titulo: "Mi perfil",
     };
   }
 

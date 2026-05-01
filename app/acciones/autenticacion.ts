@@ -222,6 +222,63 @@ export async function registrar_usuario(
   };
 }
 
+export async function solicitar_recuperacion(
+  _estadoAnterior: EstadoFormularioAutenticacion,
+  formData: FormData
+): Promise<EstadoFormularioAutenticacion> {
+  const correo = normalizarCorreo(formData.get("correo"));
+
+  if (!correo) {
+    return { error: "Ingresa tu correo electrónico." };
+  }
+
+  const supabase = await crearClienteServidor();
+  const urlRedireccion = await obtenerUrlConfirmacion();
+
+  const { error } = await supabase.auth.resetPasswordForEmail(correo, {
+    redirectTo: urlRedireccion?.replace("/auth/confirm", "/auth/restablecer"),
+  });
+
+  if (error) {
+    console.error("[supabase][recuperacion]", {
+      correo,
+      message: error.message,
+    });
+    return { error: construirMensajeErrorSupabase(error) };
+  }
+
+  return {
+    exito:
+      "Si el correo existe, recibirás un enlace para restablecer tu contraseña. Revisa tu bandeja de entrada.",
+  };
+}
+
+export async function restablecer_contrasena(
+  _estadoAnterior: EstadoFormularioAutenticacion,
+  formData: FormData
+): Promise<EstadoFormularioAutenticacion> {
+  const contrasena = limpiarTexto(formData.get("contrasena"));
+  const confirmar = limpiarTexto(formData.get("confirmar"));
+
+  if (!contrasena || contrasena.length < 6) {
+    return { error: "La contraseña debe tener al menos 6 caracteres." };
+  }
+
+  if (contrasena !== confirmar) {
+    return { error: "Las contraseñas no coinciden." };
+  }
+
+  const supabase = await crearClienteServidor();
+  const { error } = await supabase.auth.updateUser({ password: contrasena });
+
+  if (error) {
+    console.error("[supabase][restablecer]", { message: error.message });
+    return { error: construirMensajeErrorSupabase(error) };
+  }
+
+  return { exito: "Contraseña actualizada correctamente." };
+}
+
 export async function cerrar_sesion() {
   const supabase = await crearClienteServidor();
   await supabase.auth.signOut();

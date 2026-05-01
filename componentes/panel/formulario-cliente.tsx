@@ -19,6 +19,82 @@ type EspecificacionClienteFila = {
   lim_max: string;
 };
 
+type DomicilioEntregaFila = {
+  etiqueta: string;
+  direccion: string;
+};
+
+type DomicilioFiscalCampos = {
+  calle: string;
+  numero_exterior: string;
+  numero_interior: string;
+  colonia: string;
+  ciudad: string;
+  estado: string;
+  codigo_postal: string;
+  pais: string;
+};
+
+const domicilioFiscalVacio: DomicilioFiscalCampos = {
+  calle: "",
+  numero_exterior: "",
+  numero_interior: "",
+  colonia: "",
+  ciudad: "",
+  estado: "",
+  codigo_postal: "",
+  pais: "México",
+};
+
+function parsearDomicilioFiscal(valor: string | null | undefined): DomicilioFiscalCampos {
+  if (!valor) return { ...domicilioFiscalVacio };
+
+  const partes = valor.split(",").map((parte) => parte.trim());
+  if (partes.length < 4) {
+    return { ...domicilioFiscalVacio, calle: valor };
+  }
+
+  let indice = 0;
+  let calle = partes[indice] ?? "";
+  let numero_exterior = "";
+  const matchExterior = calle.match(/^(.+?)\s+#(.+)$/);
+  if (matchExterior) {
+    calle = matchExterior[1].trim();
+    numero_exterior = matchExterior[2].trim();
+  }
+  indice += 1;
+
+  let numero_interior = "";
+  if (partes[indice]?.startsWith("Int #")) {
+    numero_interior = partes[indice].substring(5).trim();
+    indice += 1;
+  }
+
+  let colonia = "";
+  if (partes[indice]?.startsWith("Col. ")) {
+    colonia = partes[indice].substring(5).trim();
+    indice += 1;
+  } else {
+    return { ...domicilioFiscalVacio, calle: valor };
+  }
+
+  const ciudad = partes[indice++] ?? "";
+  const estado = partes[indice++] ?? "";
+  const codigo_postal = partes[indice++] ?? "";
+  const pais = partes[indice++] ?? "México";
+
+  return {
+    calle,
+    numero_exterior,
+    numero_interior,
+    colonia,
+    ciudad,
+    estado,
+    codigo_postal,
+    pais: pais || "México",
+  };
+}
+
 export function FormularioCliente({
   cliente,
   onCancelar,
@@ -48,6 +124,55 @@ export function FormularioCliente({
   const [especificaciones, setEspecificaciones] = useState<EspecificacionClienteFila[]>(
     filasIniciales
   );
+
+  const domiciliosIniciales = useMemo<DomicilioEntregaFila[]>(
+    () =>
+      cliente?.direcciones?.length
+        ? cliente.direcciones.map((d) => ({
+            etiqueta: d.etiqueta,
+            direccion: d.direccion,
+          }))
+        : [],
+    [cliente]
+  );
+  const [domicilios, setDomicilios] = useState<DomicilioEntregaFila[]>(
+    domiciliosIniciales
+  );
+
+  const domicilioFiscalInicial = useMemo<DomicilioFiscalCampos>(
+    () => parsearDomicilioFiscal(cliente?.domicilio_fiscal),
+    [cliente]
+  );
+  const [domicilioFiscal, setDomicilioFiscal] = useState<DomicilioFiscalCampos>(
+    domicilioFiscalInicial
+  );
+
+  function actualizarDomicilioFiscal(
+    campo: keyof DomicilioFiscalCampos,
+    valor: string
+  ) {
+    setDomicilioFiscal((actual) => ({ ...actual, [campo]: valor }));
+  }
+
+  function actualizarDomicilio(
+    indice: number,
+    campo: keyof DomicilioEntregaFila,
+    valor: string
+  ) {
+    setDomicilios((actuales) =>
+      actuales.map((fila, i) =>
+        i === indice ? { ...fila, [campo]: valor } : fila
+      )
+    );
+  }
+
+  function agregarDomicilio() {
+    setDomicilios((actuales) => [...actuales, { etiqueta: "", direccion: "" }]);
+  }
+
+  function eliminarDomicilio(indice: number) {
+    setDomicilios((actuales) => actuales.filter((_, i) => i !== indice));
+  }
 
   function actualizarFila(
     indice: number,
@@ -108,6 +233,11 @@ export function FormularioCliente({
           type="hidden"
           value={JSON.stringify(especificaciones)}
         />
+        <input
+          name="domicilios_json"
+          type="hidden"
+          value={JSON.stringify(domicilios)}
+        />
 
         {esEdicion && (
           <input name="id_cliente" type="hidden" value={cliente!.id_cliente} />
@@ -162,34 +292,226 @@ export function FormularioCliente({
           </label>
         </div>
 
-        <div className="grid gap-4 lg:grid-cols-2">
-          <label className="block">
-            <span className="mb-2 block text-sm font-medium text-slate-600">
-              Domicilio fiscal
-            </span>
-            <input
-              className="campo-formulario"
-              defaultValue={cliente?.domicilio_fiscal ?? ""}
-              name="domicilio_fiscal"
-              placeholder="Av. Industrial 456, Col. Centro, CDMX"
-              required
-              type="text"
-            />
-          </label>
+        <section className="rounded-[24px] border border-slate-200/80 bg-white/70 p-4 md:p-5">
+          <h3 className="text-base font-semibold text-slate-900">
+            Domicilio fiscal
+          </h3>
+          <p className="mt-1 text-sm text-slate-500">
+            Captura los datos del domicilio fiscal por separado.
+          </p>
 
-          <label className="block">
-            <span className="mb-2 block text-sm font-medium text-slate-600">
-              Domicilio de entrega
-            </span>
-            <input
-              className="campo-formulario"
-              defaultValue={cliente?.domicilio_entrega ?? ""}
-              name="domicilio_entrega"
-              placeholder="Parque Industrial Norte, nave 4"
-              type="text"
-            />
-          </label>
-        </div>
+          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            <label className="block md:col-span-2">
+              <span className="mb-2 block text-xs font-medium uppercase tracking-wide text-slate-500">
+                Calle
+              </span>
+              <input
+                className="campo-formulario"
+                name="dom_calle"
+                onChange={(e) => actualizarDomicilioFiscal("calle", e.target.value)}
+                placeholder="Av. Industrial"
+                required
+                type="text"
+                value={domicilioFiscal.calle}
+              />
+            </label>
+
+            <label className="block">
+              <span className="mb-2 block text-xs font-medium uppercase tracking-wide text-slate-500">
+                Número exterior
+              </span>
+              <input
+                className="campo-formulario"
+                name="dom_numero_exterior"
+                onChange={(e) =>
+                  actualizarDomicilioFiscal("numero_exterior", e.target.value)
+                }
+                placeholder="456"
+                type="text"
+                value={domicilioFiscal.numero_exterior}
+              />
+            </label>
+
+            <label className="block">
+              <span className="mb-2 block text-xs font-medium uppercase tracking-wide text-slate-500">
+                Número interior (opcional)
+              </span>
+              <input
+                className="campo-formulario"
+                name="dom_numero_interior"
+                onChange={(e) =>
+                  actualizarDomicilioFiscal("numero_interior", e.target.value)
+                }
+                placeholder="A"
+                type="text"
+                value={domicilioFiscal.numero_interior}
+              />
+            </label>
+
+            <label className="block">
+              <span className="mb-2 block text-xs font-medium uppercase tracking-wide text-slate-500">
+                Colonia
+              </span>
+              <input
+                className="campo-formulario"
+                name="dom_colonia"
+                onChange={(e) =>
+                  actualizarDomicilioFiscal("colonia", e.target.value)
+                }
+                placeholder="Centro"
+                required
+                type="text"
+                value={domicilioFiscal.colonia}
+              />
+            </label>
+
+            <label className="block">
+              <span className="mb-2 block text-xs font-medium uppercase tracking-wide text-slate-500">
+                Ciudad
+              </span>
+              <input
+                className="campo-formulario"
+                name="dom_ciudad"
+                onChange={(e) =>
+                  actualizarDomicilioFiscal("ciudad", e.target.value)
+                }
+                placeholder="CDMX"
+                required
+                type="text"
+                value={domicilioFiscal.ciudad}
+              />
+            </label>
+
+            <label className="block">
+              <span className="mb-2 block text-xs font-medium uppercase tracking-wide text-slate-500">
+                Estado
+              </span>
+              <input
+                className="campo-formulario"
+                name="dom_estado"
+                onChange={(e) =>
+                  actualizarDomicilioFiscal("estado", e.target.value)
+                }
+                placeholder="CDMX"
+                required
+                type="text"
+                value={domicilioFiscal.estado}
+              />
+            </label>
+
+            <label className="block">
+              <span className="mb-2 block text-xs font-medium uppercase tracking-wide text-slate-500">
+                Código postal
+              </span>
+              <input
+                className="campo-formulario"
+                name="dom_codigo_postal"
+                onChange={(e) =>
+                  actualizarDomicilioFiscal("codigo_postal", e.target.value)
+                }
+                placeholder="06000"
+                required
+                type="text"
+                value={domicilioFiscal.codigo_postal}
+              />
+            </label>
+
+            <label className="block">
+              <span className="mb-2 block text-xs font-medium uppercase tracking-wide text-slate-500">
+                País
+              </span>
+              <input
+                className="campo-formulario"
+                name="dom_pais"
+                onChange={(e) =>
+                  actualizarDomicilioFiscal("pais", e.target.value)
+                }
+                placeholder="México"
+                type="text"
+                value={domicilioFiscal.pais}
+              />
+            </label>
+          </div>
+        </section>
+
+        <section className="rounded-[24px] border border-slate-200/80 bg-white/70 p-4 md:p-5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h3 className="text-base font-semibold text-slate-900">
+                Domicilios de entrega
+              </h3>
+              <p className="mt-1 text-sm text-slate-500">
+                Registra una o varias direcciones donde se realizan entregas.
+              </p>
+            </div>
+            <Button
+              onClick={agregarDomicilio}
+              size="2"
+              type="button"
+              variant="soft"
+            >
+              + Agregar domicilio
+            </Button>
+          </div>
+
+          {domicilios.length === 0 ? (
+            <div className="mt-4 rounded-[18px] border border-dashed border-slate-200 bg-slate-50/80 px-4 py-3 text-sm text-slate-500">
+              Aún no hay domicilios de entrega registrados.
+            </div>
+          ) : (
+            <div className="mt-4 space-y-3">
+              {domicilios.map((domicilio, indice) => (
+                <div
+                  className="rounded-[20px] border border-slate-200/80 bg-white p-4"
+                  key={indice}
+                >
+                  <div className="grid gap-3 md:grid-cols-[minmax(0,200px)_minmax(0,1fr)_auto]">
+                    <label className="block">
+                      <span className="mb-2 block text-xs font-medium uppercase tracking-wide text-slate-500">
+                        Etiqueta
+                      </span>
+                      <input
+                        className="campo-formulario"
+                        onChange={(e) =>
+                          actualizarDomicilio(indice, "etiqueta", e.target.value)
+                        }
+                        placeholder="Planta Norte"
+                        type="text"
+                        value={domicilio.etiqueta}
+                      />
+                    </label>
+
+                    <label className="block">
+                      <span className="mb-2 block text-xs font-medium uppercase tracking-wide text-slate-500">
+                        Dirección
+                      </span>
+                      <input
+                        className="campo-formulario"
+                        onChange={(e) =>
+                          actualizarDomicilio(indice, "direccion", e.target.value)
+                        }
+                        placeholder="Parque Industrial Norte, nave 4"
+                        type="text"
+                        value={domicilio.direccion}
+                      />
+                    </label>
+
+                    <div className="flex items-end">
+                      <Button
+                        color="red"
+                        onClick={() => eliminarDomicilio(indice)}
+                        type="button"
+                        variant="soft"
+                      >
+                        Quitar
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           <label className="block">
@@ -220,7 +542,7 @@ export function FormularioCliente({
 
           <label className="block">
             <span className="mb-2 block text-sm font-medium text-slate-600">
-              Correo almacenista
+              Correo almacenista (opcional)
             </span>
             <input
               className="campo-formulario"
@@ -243,19 +565,6 @@ export function FormularioCliente({
               name="correo_gte_calidad"
               placeholder="calidad@cliente.com"
               type="email"
-            />
-          </label>
-
-          <label className="block">
-            <span className="mb-2 block text-sm font-medium text-slate-600">
-              Documento de especificaciones
-            </span>
-            <input
-              className="campo-formulario"
-              defaultValue={cliente?.documento_especificaciones ?? ""}
-              name="documento_especificaciones"
-              placeholder="ESP-CLIENTE-2026-01"
-              type="text"
             />
           </label>
         </div>

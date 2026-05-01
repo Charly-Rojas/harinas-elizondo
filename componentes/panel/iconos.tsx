@@ -53,6 +53,21 @@ export function IconoSettings(props: Props) {
   );
 }
 
+export function IconoUsuario(props: Props) {
+  return (
+    <IconoBase {...props}>
+      <circle cx="12" cy="8" r="3.5" stroke="currentColor" strokeWidth="1.7" />
+      <path
+        d="M5 20a7 7 0 0 1 14 0"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.7"
+      />
+    </IconoBase>
+  );
+}
+
 export function IconoClientes(props: Props) {
   return (
     <IconoBase {...props}>
@@ -307,5 +322,161 @@ export function IconoCerrar(props: Props) {
         strokeWidth="1.8"
       />
     </IconoBase>
+  );
+}
+
+export function IconoPokeballNormal(props: Props) {
+  return (
+    <svg
+      aria-hidden="true"
+      fill="none"
+      height="32"
+      shapeRendering="crispEdges"
+      viewBox="0 0 32 32"
+      width="32"
+      {...props}
+    >
+      <path
+        d="M12 2h8v2h4v2h2v2h2v4h2v8h-2v4h-2v2h-2v2h-4v2h-8v-2H8v-2H6v-2H4v-4H2v-8h2V8h2V6h2V4h4Z"
+        fill="#1F2937"
+      />
+      <path d="M12 4h8v2h4v2h2v2h2v4H4v-4h2V8h2V6h4Z" fill="#EE1515" />
+      <path d="M4 16h24v4h-2v2h-2v2h-4v2h-8v-2H8v-2H6v-2H4Z" fill="#FFFFFF" />
+      <path d="M4 15h24v2H4Z" fill="#1F2937" />
+      <path d="M14 12h4v2h2v4h-2v2h-4v-2h-2v-4h2Z" fill="#6B7280" />
+      <path d="M14 14h4v4h-4Z" fill="#FFFFFF" />
+      <path d="M15 15h2v2h-2Z" fill="#D1D5DB" />
+    </svg>
+  );
+}
+
+export function IconoGreatBall(props: Props) {
+  return (
+    <svg
+      aria-hidden="true"
+      fill="none"
+      height="32"
+      shapeRendering="crispEdges"
+      viewBox="0 0 32 32"
+      width="32"
+      {...props}
+    >
+      <path
+        d="M12 2h8v2h4v2h2v2h2v4h2v8h-2v4h-2v2h-2v2h-4v2h-8v-2H8v-2H6v-2H4v-4H2v-8h2V8h2V6h2V4h4Z"
+        fill="#1F2937"
+      />
+      <path d="M12 4h8v2h4v2h2v2h2v4H4v-4h2V8h2V6h4Z" fill="#3B82F6" />
+      <path d="M4 16h24v4h-2v2h-2v2h-4v2h-8v-2H8v-2H6v-2H4Z" fill="#FFFFFF" />
+      <path d="M8 8h4v2h2v2h-2v-2H8Zm12 0h4v2h-4v2h-2v-2h2Z" fill="#EF4444" />
+      <path d="M4 15h24v2H4Z" fill="#1F2937" />
+      <path d="M14 12h4v2h2v4h-2v2h-4v-2h-2v-4h2Z" fill="#6B7280" />
+      <path d="M14 14h4v4h-4Z" fill="#FFFFFF" />
+      <path d="M15 15h2v2h-2Z" fill="#D1D5DB" />
+    </svg>
+  );
+}
+
+export function IconoUltraBall(props: Props) {
+  return (
+    <svg
+      aria-hidden="true"
+      fill="none"
+      height="32"
+      shapeRendering="crispEdges"
+      viewBox="0 0 32 32"
+      width="32"
+      {...props}
+    >
+      <path
+        d="M12 2h8v2h4v2h2v2h2v4h2v8h-2v4h-2v2h-2v2h-4v2h-8v-2H8v-2H6v-2H4v-4H2v-8h2V8h2V6h2V4h4Z"
+        fill="#111827"
+      />
+      <path d="M12 4h8v2h4v2h2v2h2v4H4v-4h2V8h2V6h4Z" fill="#1F2937" />
+      <path d="M4 16h24v4h-2v2h-2v2h-4v2h-8v-2H8v-2H6v-2H4Z" fill="#FFFFFF" />
+      <path d="M8 8h6v2H8Zm10 0h6v2h-6Zm-2 2h4v2h-4Z" fill="#EAB308" />
+      <path d="M4 15h24v2H4Z" fill="#111827" />
+      <path d="M14 12h4v2h2v4h-2v2h-4v-2h-2v-4h2Z" fill="#6B7280" />
+      <path d="M14 14h4v4h-4Z" fill="#FFFFFF" />
+      <path d="M15 15h2v2h-2Z" fill="#D1D5DB" />
+    </svg>
+  );
+}
+
+export function IconoSafariBall(props: Props) {
+  return (
+    <svg
+      aria-hidden="true"
+      fill="none"
+      height="32"
+      shapeRendering="crispEdges"
+      viewBox="0 0 32 32"
+      width="32"
+      {...props}
+    >
+      <path
+        d="M12 2h8v2h4v2h2v2h2v4h2v8h-2v4h-2v2h-2v2h-4v2h-8v-2H8v-2H6v-2H4v-4H2v-8h2V8h2V6h2V4h4Z"
+        fill="#1F2937"
+      />
+      <path d="M12 4h8v2h4v2h2v2h2v4H4v-4h2V8h2V6h4Z" fill="#22C55E" />
+      <path d="M4 16h24v4h-2v2h-2v2h-4v2h-8v-2H8v-2H6v-2H4Z" fill="#FFFFFF" />
+      <path d="M8 8h4v2H8Zm6 2h4v2h-4Zm6-2h4v2h-4Zm-10 4h4v2h-4Zm10 0h4v2h-4Z" fill="#166534" />
+      <path d="M12 8h2v2h-2Zm6 4h2v2h-2Z" fill="#86EFAC" />
+      <path d="M4 15h24v2H4Z" fill="#1F2937" />
+      <path d="M14 12h4v2h2v4h-2v2h-4v-2h-2v-4h2Z" fill="#6B7280" />
+      <path d="M14 14h4v4h-4Z" fill="#FFFFFF" />
+      <path d="M15 15h2v2h-2Z" fill="#D1D5DB" />
+    </svg>
+  );
+}
+
+export function IconoPremierBall(props: Props) {
+  return (
+    <svg
+      aria-hidden="true"
+      fill="none"
+      height="32"
+      shapeRendering="crispEdges"
+      viewBox="0 0 32 32"
+      width="32"
+      {...props}
+    >
+      <path
+        d="M12 2h8v2h4v2h2v2h2v4h2v8h-2v4h-2v2h-2v2h-4v2h-8v-2H8v-2H6v-2H4v-4H2v-8h2V8h2V6h2V4h4Z"
+        fill="#D1D5DB"
+      />
+      <path d="M12 4h8v2h4v2h2v2h2v4H4v-4h2V8h2V6h4Z" fill="#FFFFFF" />
+      <path d="M4 16h24v4h-2v2h-2v2h-4v2h-8v-2H8v-2H6v-2H4Z" fill="#FFFFFF" />
+      <path d="M4 15h24v2H4Z" fill="#EF4444" />
+      <path d="M14 12h4v2h2v4h-2v2h-4v-2h-2v-4h2Z" fill="#EF4444" />
+      <path d="M14 14h4v4h-4Z" fill="#FFFFFF" />
+      <path d="M15 15h2v2h-2Z" fill="#FCA5A5" />
+    </svg>
+  );
+}
+
+export function IconoMasterBall(props: Props) {
+  return (
+    <svg
+      aria-hidden="true"
+      fill="none"
+      height="32"
+      shapeRendering="crispEdges"
+      viewBox="0 0 32 32"
+      width="32"
+      {...props}
+    >
+      <path
+        d="M12 2h8v2h4v2h2v2h2v4h2v8h-2v4h-2v2h-2v2h-4v2h-8v-2H8v-2H6v-2H4v-4H2v-8h2V8h2V6h2V4h4Z"
+        fill="#1F2937"
+      />
+      <path d="M12 4h8v2h4v2h2v2h2v4H4v-4h2V8h2V6h4Z" fill="#8B5CF6" />
+      <path d="M4 16h24v4h-2v2h-2v2h-4v2h-8v-2H8v-2H6v-2H4Z" fill="#FFFFFF" />
+      <path d="M9 8h2v2H9Zm12 0h2v2h-2Z" fill="#F9A8D4" />
+      <path d="M10 12h2V8h2v2h1V8h2v2h1V8h2v4h2V8h2v4h-2v-1h-1v1h-2v-1h-1v1h-2v-1h-1v1h-2v-1h-1v1h-2Z" fill="#FFFFFF" />
+      <path d="M4 15h24v2H4Z" fill="#1F2937" />
+      <path d="M14 12h4v2h2v4h-2v2h-4v-2h-2v-4h2Z" fill="#6B7280" />
+      <path d="M14 14h4v4h-4Z" fill="#FFFFFF" />
+      <path d="M15 15h2v2h-2Z" fill="#D1D5DB" />
+    </svg>
   );
 }
