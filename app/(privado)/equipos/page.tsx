@@ -128,6 +128,12 @@ function DetalleEquipo({
             </p>
           </div>
           <div className="rounded-[24px] border border-slate-200/80 bg-white/80 p-4">
+            <p className="text-sm font-medium text-slate-500">Garantia (meses)</p>
+            <p className="mt-2 text-base text-slate-900">
+              {equipo.garantia_meses ?? "No capturada"}
+            </p>
+          </div>
+          <div className="rounded-[24px] border border-slate-200/80 bg-white/80 p-4">
             <p className="text-sm font-medium text-slate-500">Vigencia de garantia</p>
             <p className="mt-2 text-base text-slate-900">
               {equipo.vigencia_garantia || "No capturada"}
@@ -146,7 +152,7 @@ function DetalleEquipo({
             </p>
           </div>
           <div className="rounded-[24px] border border-slate-200/80 bg-white/80 p-4 md:col-span-2 xl:col-span-3">
-            <p className="text-sm font-medium text-slate-500">Garantia</p>
+            <p className="text-sm font-medium text-slate-500">Garantia legada</p>
             <p className="mt-2 text-base leading-7 text-slate-900">
               {equipo.garantia || "No capturada"}
             </p>

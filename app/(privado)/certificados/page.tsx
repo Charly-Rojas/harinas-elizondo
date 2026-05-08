@@ -31,13 +31,13 @@ export default function PaginaCertificados() {
       supabase
         .from("certificados_calidad")
         .select(
-          "*, clientes(id_cliente, nombre), lotes_produccion(id_lote, numero_lote, fecha_caducidad, productos(*)), inspecciones(id_inspeccion, secuencia, es_ajuste, id_inspeccion_base), certificado_resultados(*)"
+          "*, clientes(id_cliente, nombre, domicilio_fiscal), lotes_produccion(id_lote, numero_lote, fecha_produccion, fecha_caducidad, productos(*)), inspecciones(id_inspeccion, secuencia, es_ajuste, id_inspeccion_base), certificado_resultados(*)"
         )
         .order("creado_en", { ascending: false }),
       supabase
         .from("inspecciones")
         .select(
-          "*, lotes_produccion(*, productos(*)), clientes(id_cliente, nombre, correo_contacto_cliente, correo_almacenista), resultados_analisis(*, parametros_calidad(*), equipos_laboratorio(*))"
+          "*, lotes_produccion(*, productos(*)), clientes(id_cliente, nombre, domicilio_fiscal, correo_contacto_cliente, correo_almacenista, direcciones(*)), resultados_analisis(*, parametros_calidad(*), equipos_laboratorio(*))"
         )
         .not("id_cliente", "is", null)
         .order("fecha_inspeccion", { ascending: false }),
@@ -72,6 +72,7 @@ export default function PaginaCertificados() {
         certificado.folio?.toLowerCase().includes(texto) ||
         certificado.clientes?.nombre?.toLowerCase().includes(texto) ||
         certificado.lotes_produccion?.numero_lote?.toLowerCase().includes(texto) ||
+        certificado.numero_pedido_cliente?.toLowerCase().includes(texto) ||
         certificado.numero_factura?.toLowerCase().includes(texto) ||
         false
       );
@@ -202,6 +203,7 @@ export default function PaginaCertificados() {
 
                     <div className="mt-4 space-y-2 text-sm text-slate-500">
                       <p>{certificado.clientes?.nombre || "Sin cliente"}</p>
+                      <p>{certificado.numero_pedido_cliente || "Sin pedido"}</p>
                       <p>{certificado.numero_factura || "Sin factura"}</p>
                     </div>
 
@@ -227,6 +229,7 @@ export default function PaginaCertificados() {
                     <th className="px-5 py-3.5 font-semibold text-slate-500">Cliente</th>
                     <th className="px-5 py-3.5 font-semibold text-slate-500">Lote</th>
                     <th className="px-5 py-3.5 font-semibold text-slate-500">Inspección</th>
+                    <th className="px-5 py-3.5 font-semibold text-slate-500">Pedido</th>
                     <th className="px-5 py-3.5 font-semibold text-slate-500">Factura</th>
                     <th className="px-5 py-3.5 font-semibold text-slate-500">Cumplimiento</th>
                     <th className="px-5 py-3.5 text-right font-semibold text-slate-500">Acciones</th>
@@ -258,6 +261,9 @@ export default function PaginaCertificados() {
                           <Badge color="gray" radius="full" size="1" variant="soft">
                             {certificado.inspecciones?.secuencia || "-"}
                           </Badge>
+                        </td>
+                        <td className="px-5 py-4 text-slate-600">
+                          {certificado.numero_pedido_cliente || "-"}
                         </td>
                         <td className="px-5 py-4 text-slate-600">
                           {certificado.numero_factura || "-"}

@@ -3,11 +3,23 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requiere_sesion } from "@/lib/autorizacion";
+import type { FormState } from "@/lib/form-state";
 import { crearClienteServidor } from "@/lib/supabase/servidor";
 
-export type EstadoFormularioLote = {
-  error?: string;
+type ValoresFormularioLote = {
+  id_lote: string;
+  numero_lote: string;
+  id_producto: string;
+  variedad: string;
+  fecha_produccion: string;
+  fecha_caducidad: string;
+  observaciones: string;
 };
+
+export type EstadoFormularioLote = FormState<
+  ValoresFormularioLote,
+  keyof ValoresFormularioLote
+>;
 
 function limpiar(valor: FormDataEntryValue | null) {
   return String(valor ?? "").trim();
@@ -19,21 +31,59 @@ function numeroOpcional(valor: string) {
   return Number.isFinite(numero) ? numero : null;
 }
 
+function extraerValores(formData: FormData): ValoresFormularioLote {
+  return {
+    id_lote: limpiar(formData.get("id_lote")),
+    numero_lote: limpiar(formData.get("numero_lote")).toUpperCase(),
+    id_producto: limpiar(formData.get("id_producto")),
+    variedad: limpiar(formData.get("variedad")),
+    fecha_produccion: limpiar(formData.get("fecha_produccion")),
+    fecha_caducidad: limpiar(formData.get("fecha_caducidad")),
+    observaciones: limpiar(formData.get("observaciones")),
+  };
+}
+
+function errorFormulario(
+  values: ValoresFormularioLote,
+  formError: string,
+  fieldErrors?: EstadoFormularioLote["fieldErrors"]
+): EstadoFormularioLote {
+  return { formError, fieldErrors, values };
+}
+
 export async function crear_lote(
   _estado: EstadoFormularioLote,
   formData: FormData
 ): Promise<EstadoFormularioLote> {
   const usuario = await requiere_sesion();
 
-  const numero_lote = limpiar(formData.get("numero_lote")).toUpperCase();
-  const id_producto = numeroOpcional(limpiar(formData.get("id_producto")));
-  const variedad = limpiar(formData.get("variedad")) || null;
-  const fecha_produccion = limpiar(formData.get("fecha_produccion")) || null;
-  const fecha_caducidad = limpiar(formData.get("fecha_caducidad")) || null;
-  const observaciones = limpiar(formData.get("observaciones")) || null;
+  const values = extraerValores(formData);
+  const numero_lote = values.numero_lote;
+  const id_producto = numeroOpcional(values.id_producto);
+  const variedad = values.variedad || null;
+  const fecha_produccion = values.fecha_produccion || null;
+  const fecha_caducidad = values.fecha_caducidad || null;
+  const observaciones = values.observaciones || null;
 
   if (!numero_lote) {
-    return { error: "El número de lote es obligatorio." };
+    return errorFormulario(values, "El número de lote es obligatorio.", {
+      numero_lote: "Captura el numero de lote.",
+    });
+  }
+
+  if (
+    fecha_produccion &&
+    fecha_caducidad &&
+    fecha_caducidad < fecha_produccion
+  ) {
+    return errorFormulario(
+      values,
+      "La fecha de caducidad no puede ser anterior a la de producción.",
+      {
+        fecha_produccion: "Revisa la fecha de produccion.",
+        fecha_caducidad: "Revisa la fecha de caducidad.",
+      }
+    );
   }
 
   const supabase = await crearClienteServidor();
@@ -45,7 +95,9 @@ export async function crear_lote(
     .maybeSingle();
 
   if (existente) {
-    return { error: "Ya existe un lote con ese número." };
+    return errorFormulario(values, "Ya existe un lote con ese número.", {
+      numero_lote: "Ese numero de lote ya esta registrado.",
+    });
   }
 
   const { error } = await supabase.from("lotes_produccion").insert({
@@ -61,7 +113,7 @@ export async function crear_lote(
 
   if (error) {
     console.error("[lotes][crear]", error);
-    return { error: "No fue posible registrar el lote." };
+    return errorFormulario(values, "No fue posible registrar el lote.");
   }
 
   revalidatePath("/lotes");
@@ -74,17 +126,34 @@ export async function editar_lote(
 ): Promise<EstadoFormularioLote> {
   const usuario = await requiere_sesion();
 
-  const id_lote = parseInt(limpiar(formData.get("id_lote")), 10);
-  const numero_lote = limpiar(formData.get("numero_lote")).toUpperCase();
-  const id_producto = numeroOpcional(limpiar(formData.get("id_producto")));
-  const variedad = limpiar(formData.get("variedad")) || null;
-  const fecha_produccion = limpiar(formData.get("fecha_produccion")) || null;
-  const fecha_caducidad = limpiar(formData.get("fecha_caducidad")) || null;
-  const observaciones = limpiar(formData.get("observaciones")) || null;
+  const values = extraerValores(formData);
+  const id_lote = parseInt(values.id_lote, 10);
+  const numero_lote = values.numero_lote;
+  const id_producto = numeroOpcional(values.id_producto);
+  const variedad = values.variedad || null;
+  const fecha_produccion = values.fecha_produccion || null;
+  const fecha_caducidad = values.fecha_caducidad || null;
+  const observaciones = values.observaciones || null;
 
-  if (!id_lote) return { error: "Lote inválido." };
+  if (!id_lote) return errorFormulario(values, "Lote inválido.");
   if (!numero_lote) {
-    return { error: "El número de lote es obligatorio." };
+    return errorFormulario(values, "El número de lote es obligatorio.", {
+      numero_lote: "Captura el numero de lote.",
+    });
+  }
+  if (
+    fecha_produccion &&
+    fecha_caducidad &&
+    fecha_caducidad < fecha_produccion
+  ) {
+    return errorFormulario(
+      values,
+      "La fecha de caducidad no puede ser anterior a la de producción.",
+      {
+        fecha_produccion: "Revisa la fecha de produccion.",
+        fecha_caducidad: "Revisa la fecha de caducidad.",
+      }
+    );
   }
 
   const supabase = await crearClienteServidor();
@@ -97,7 +166,9 @@ export async function editar_lote(
     .maybeSingle();
 
   if (existente) {
-    return { error: "Ya existe otro lote con ese número." };
+    return errorFormulario(values, "Ya existe otro lote con ese número.", {
+      numero_lote: "Ese numero de lote ya esta registrado.",
+    });
   }
 
   const { error } = await supabase
@@ -115,7 +186,7 @@ export async function editar_lote(
 
   if (error) {
     console.error("[lotes][editar]", error);
-    return { error: "No fue posible actualizar el lote." };
+    return errorFormulario(values, "No fue posible actualizar el lote.");
   }
 
   revalidatePath("/lotes");

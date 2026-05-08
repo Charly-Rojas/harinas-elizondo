@@ -1,10 +1,12 @@
+import type { Direccion } from "@/lib/tipos-clientes";
+
 export type EstadoRegistro = "activo" | "inactivo" | "baja";
 export type TipoEquipo = "alveografo" | "farinografo" | "otro";
 export type TipoOrigenInspeccion = "medicion" | "ajuste" | "certificado";
 export type EstadoInspeccion = "borrador" | "cerrada" | "aprobada" | "cancelada";
 export type EstadoCertificado = "borrador" | "emitido" | "cancelado";
 export type EstadoEnvioCertificado = "pendiente" | "enviado" | "fallido";
-export type OrigenLimites = "internacional" | "cliente" | "interno";
+export type OrigenLimites = "internacional" | "cliente" | "global" | "interno";
 
 export type Producto = {
   id_producto: number;
@@ -30,6 +32,7 @@ export type EquipoLaboratorio = {
   proveedor: string | null;
   fecha_adquisicion: string | null;
   garantia: string | null;
+  garantia_meses: number | null;
   vigencia_garantia: string | null;
   ubicacion: string | null;
   responsable: string | null;
@@ -47,9 +50,9 @@ export type ParametroCalidad = {
   clave: string;
   nombre: string;
   unidad_medida: string | null;
-  equipo_origen: TipoEquipo;
   lim_min_global: number | null;
   lim_max_global: number | null;
+  equipo_origen: TipoEquipo;
   descripcion: string | null;
   activo: boolean;
   creado_en: string;
@@ -124,8 +127,10 @@ export type InspeccionConRelaciones = Inspeccion & {
   clientes?: {
     id_cliente: number;
     nombre: string;
+    domicilio_fiscal?: string | null;
     correo_contacto_cliente?: string | null;
     correo_almacenista?: string | null;
+    direcciones?: Direccion[] | null;
   } | null;
   inspecciones?: {
     id_inspeccion: number;
@@ -160,18 +165,23 @@ export type CertificadoCalidad = {
   id_cliente: number;
   id_lote: number;
   id_inspeccion: number;
-  numero_orden_compra: string | null;
+  numero_pedido_cliente: string | null;
   cantidad_solicitada: number | null;
   cantidad_total_entrega: number | null;
   numero_factura: string | null;
   fecha_envio: string | null;
+  fecha_produccion: string | null;
   fecha_caducidad: string | null;
+  domicilio_fiscal_snapshot: string | null;
+  domicilio_entrega_snapshot: string | null;
+  domicilio_entrega_etiqueta_snapshot: string | null;
   correo_cliente: string | null;
   correo_almacen: string | null;
   status_certificado: EstadoCertificado;
   status_envio: EstadoEnvioCertificado;
   pdf_storage_path: string | null;
   pdf_nombre_archivo: string | null;
+  pdf_version: number | null;
   observaciones: string | null;
   emitido_en: string | null;
   creado_en: string;
@@ -201,6 +211,7 @@ export type CertificadoConRelaciones = CertificadoCalidad & {
   clientes?: {
     id_cliente: number;
     nombre: string;
+    domicilio_fiscal?: string | null;
   } | null;
   lotes_produccion?: (LoteProduccion & {
     productos?: Producto | null;

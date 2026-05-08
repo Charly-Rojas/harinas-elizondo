@@ -23,12 +23,12 @@ function redirigirConMensaje(
 
 function obtenerRolDesdeFormulario(valor: FormDataEntryValue | null): RolUsuario | null {
   if (
-    valor === "superadmin" ||
     valor === "admin" ||
+    valor === "gerente_laboratorio" ||
     valor === "gte_calidad" ||
     valor === "gte_plantas" ||
     valor === "dir_operaciones" ||
-    valor === "operador"
+    valor === "laboratorista"
   ) {
     return valor;
   }
@@ -57,7 +57,7 @@ export async function aprobar_usuario(formData: FormData) {
 
   const { data: perfilObjetivo, error: errorPerfil } = await supabaseAdmin
     .from("perfiles")
-    .select("id, rol, aprobado")
+    .select("id, rol, aprobado, status")
     .eq("id", idObjetivo)
     .maybeSingle();
 
@@ -72,18 +72,12 @@ export async function aprobar_usuario(formData: FormData) {
     );
   }
 
-  if (perfilObjetivo.rol === "superadmin" && actor.perfil.rol !== "superadmin") {
-    redirigirConMensaje(
-      "error",
-      "Solo el superadmin puede modificar otra cuenta superadmin."
-    );
-  }
-
   const { error } = await supabaseAdmin
     .from("perfiles")
     .update({
       rol: rolObjetivo,
       aprobado: true,
+      status: "activo",
       aprobado_en: new Date().toISOString(),
       aprobado_por: actor.usuario.id,
     })
@@ -123,19 +117,12 @@ export async function actualizar_rol(formData: FormData) {
 
   const { data: perfilObjetivo, error: errorPerfil } = await supabaseAdmin
     .from("perfiles")
-    .select("id, rol, aprobado")
+    .select("id, rol, aprobado, status")
     .eq("id", idObjetivo)
     .maybeSingle();
 
   if (errorPerfil || !perfilObjetivo) {
     redirigirConMensaje("error", "No se encontró el usuario seleccionado.");
-  }
-
-  if (perfilObjetivo.rol === "superadmin" && actor.perfil.rol !== "superadmin") {
-    redirigirConMensaje(
-      "error",
-      "Solo el superadmin puede cambiar el rol de otra cuenta superadmin."
-    );
   }
 
   const { error } = await supabaseAdmin
@@ -154,9 +141,108 @@ export async function actualizar_rol(formData: FormData) {
   redirigirConMensaje("exito", "Rol actualizado correctamente.");
 }
 
-/*
-SQL manual para ejecutar en Supabase SQL Editor:
+export async function rechazar_usuario(formData: FormData) {
+  const idObjetivo = String(formData.get("id") ?? "").trim();
 
-ALTER TABLE perfiles DROP CONSTRAINT IF EXISTS perfiles_rol_check;
-ALTER TABLE perfiles ADD CONSTRAINT perfiles_rol_check CHECK (rol IN ('superadmin', 'admin', 'gte_calidad', 'gte_plantas', 'dir_operaciones', 'operador'));
-*/
+  if (!idObjetivo) {
+    redirigirConMensaje("error", "Datos incompletos para rechazar al usuario.");
+  }
+
+  const actor = await requiere_admin();
+
+  if (actor.usuario.id === idObjetivo) {
+    redirigirConMensaje("error", "No puedes rechazar tu propia cuenta.");
+  }
+
+  const supabaseAdmin = crearClienteAdmin();
+  const { error } = await supabaseAdmin
+    .from("perfiles")
+    .update({
+      aprobado: false,
+      status: "rechazado",
+      aprobado_en: null,
+      aprobado_por: null,
+    })
+    .eq("id", idObjetivo);
+
+  if (error) {
+    redirigirConMensaje("error", "No fue posible rechazar al usuario.");
+  }
+
+  revalidatePath("/", "layout");
+  revalidatePath("/settings");
+  redirigirConMensaje("exito", "Usuario rechazado correctamente.");
+}
+
+export async function dar_baja_usuario(formData: FormData) {
+  const idObjetivo = String(formData.get("id") ?? "").trim();
+
+  if (!idObjetivo) {
+    redirigirConMensaje("error", "Datos incompletos para dar de baja al usuario.");
+  }
+
+  const actor = await requiere_admin();
+
+  if (actor.usuario.id === idObjetivo) {
+    redirigirConMensaje("error", "No puedes dar de baja tu propia cuenta.");
+  }
+
+  const supabaseAdmin = crearClienteAdmin();
+  const { error } = await supabaseAdmin
+    .from("perfiles")
+    .update({
+      aprobado: false,
+      status: "baja",
+    })
+    .eq("id", idObjetivo);
+
+  if (error) {
+    redirigirConMensaje("error", "No fue posible dar de baja al usuario.");
+  }
+
+  revalidatePath("/", "layout");
+  revalidatePath("/settings");
+  redirigirConMensaje("exito", "Usuario dado de baja correctamente.");
+}
+
+export async function reactivar_usuario(formData: FormData) {
+  const idObjetivo = String(formData.get("id") ?? "").trim();
+  const rolObjetivo = obtenerRolDesdeFormulario(formData.get("rol"));
+
+  if (!idObjetivo) {
+    redirigirConMensaje("error", "Datos incompletos para reactivar al usuario.");
+  }
+
+  const actor = await requiere_admin();
+
+  if (actor.usuario.id === idObjetivo) {
+    redirigirConMensaje("error", "No puedes reactivar tu propia cuenta.");
+  }
+
+  if (rolObjetivo && !puede_asignar_rol(actor.perfil.rol, rolObjetivo)) {
+    redirigirConMensaje(
+      "error",
+      "Tu rol actual no puede asignar ese permiso."
+    );
+  }
+
+  const supabaseAdmin = crearClienteAdmin();
+  const { error } = await supabaseAdmin
+    .from("perfiles")
+    .update({
+      aprobado: true,
+      status: "activo",
+      ...(rolObjetivo ? { rol: rolObjetivo } : {}),
+      aprobado_en: new Date().toISOString(),
+      aprobado_por: actor.usuario.id,
+    })
+    .eq("id", idObjetivo);
+
+  if (error) {
+    redirigirConMensaje("error", "No fue posible reactivar al usuario.");
+  }
+
+  revalidatePath("/", "layout");
+  revalidatePath("/settings");
+  redirigirConMensaje("exito", "Usuario reactivado correctamente.");
+}

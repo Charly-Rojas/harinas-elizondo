@@ -6,20 +6,40 @@ import { requiere_sesion } from "@/lib/autorizacion";
 import { registrarAuditoria } from "@/lib/auditoria";
 import {
   descargarPdfCertificado,
-  guardarPdfCertificado,
+  generarYGuardarPdfCertificado,
   obtenerCertificadoDetalleConCliente,
+  requiereRegenerarPdf,
 } from "@/lib/certificados";
 import {
   correoConfigurado,
   enviarCorreoCertificado,
   normalizarDestinatarios,
 } from "@/lib/correo";
-import { construirPayloadPdfCertificado, generarPdfCertificado } from "@/lib/pdf-certificados";
+import {
+  PDF_CERTIFICADO_VERSION,
+} from "@/lib/pdf-certificados";
 import { crearClienteServidor } from "@/lib/supabase/servidor";
+import type { FormState } from "@/lib/form-state";
 
-export type EstadoFormularioCertificado = {
-  error?: string;
+type ValoresFormularioCertificado = {
+  id_inspeccion: string;
+  numero_pedido_cliente: string;
+  cantidad_solicitada: string;
+  cantidad_total_entrega: string;
+  numero_factura: string;
+  fecha_envio: string;
+  fecha_produccion: string;
+  fecha_caducidad: string;
+  id_direccion_entrega: string;
+  correo_cliente: string;
+  correo_almacen: string;
+  observaciones: string;
 };
+
+export type EstadoFormularioCertificado = FormState<
+  ValoresFormularioCertificado,
+  keyof ValoresFormularioCertificado
+>;
 
 function limpiar(valor: FormDataEntryValue | null) {
   return String(valor ?? "").trim();
@@ -29,6 +49,35 @@ function numeroOpcional(valor: string) {
   if (!valor) return null;
   const numero = Number(valor);
   return Number.isFinite(numero) ? numero : null;
+}
+
+function extraerValoresFormulario(formData: FormData): ValoresFormularioCertificado {
+  return {
+    id_inspeccion: limpiar(formData.get("id_inspeccion")),
+    numero_pedido_cliente: limpiar(formData.get("numero_pedido_cliente")),
+    cantidad_solicitada: limpiar(formData.get("cantidad_solicitada")),
+    cantidad_total_entrega: limpiar(formData.get("cantidad_total_entrega")),
+    numero_factura: limpiar(formData.get("numero_factura")),
+    fecha_envio: limpiar(formData.get("fecha_envio")),
+    fecha_produccion: limpiar(formData.get("fecha_produccion")),
+    fecha_caducidad: limpiar(formData.get("fecha_caducidad")),
+    id_direccion_entrega: limpiar(formData.get("id_direccion_entrega")),
+    correo_cliente: limpiar(formData.get("correo_cliente")),
+    correo_almacen: limpiar(formData.get("correo_almacen")),
+    observaciones: limpiar(formData.get("observaciones")),
+  };
+}
+
+function errorFormularioCertificado(
+  values: ValoresFormularioCertificado,
+  formError: string,
+  fieldErrors?: EstadoFormularioCertificado["fieldErrors"]
+): EstadoFormularioCertificado {
+  return {
+    formError,
+    fieldErrors,
+    values,
+  };
 }
 
 function redirigirDetalleCertificado(
@@ -68,21 +117,26 @@ export async function crear_certificado(
 ): Promise<EstadoFormularioCertificado> {
   const usuario = await requiere_sesion();
 
-  const id_inspeccion = parseInt(limpiar(formData.get("id_inspeccion")), 10);
-  const numero_orden_compra = limpiar(formData.get("numero_orden_compra")) || null;
-  const cantidad_solicitada = numeroOpcional(limpiar(formData.get("cantidad_solicitada")));
-  const cantidad_total_entrega = numeroOpcional(
-    limpiar(formData.get("cantidad_total_entrega"))
-  );
-  const numero_factura = limpiar(formData.get("numero_factura")) || null;
-  const fecha_envio = limpiar(formData.get("fecha_envio")) || null;
-  const fecha_caducidad = limpiar(formData.get("fecha_caducidad")) || null;
-  const correo_cliente = limpiar(formData.get("correo_cliente")) || null;
-  const correo_almacen = limpiar(formData.get("correo_almacen")) || null;
-  const observaciones = limpiar(formData.get("observaciones")) || null;
+  const values = extraerValoresFormulario(formData);
+  const id_inspeccion = parseInt(values.id_inspeccion, 10);
+  const numero_pedido_cliente = values.numero_pedido_cliente || null;
+  const cantidad_solicitada = numeroOpcional(values.cantidad_solicitada);
+  const cantidad_total_entrega = numeroOpcional(values.cantidad_total_entrega);
+  const numero_factura = values.numero_factura || null;
+  const fecha_envio = values.fecha_envio || null;
+  const fecha_produccion = values.fecha_produccion || null;
+  const fecha_caducidad = values.fecha_caducidad || null;
+  const id_direccion_entrega = values.id_direccion_entrega
+    ? parseInt(values.id_direccion_entrega, 10)
+    : null;
+  const correo_cliente = values.correo_cliente || null;
+  const correo_almacen = values.correo_almacen || null;
+  const observaciones = values.observaciones || null;
 
   if (!id_inspeccion) {
-    return { error: "Debes seleccionar una inspección." };
+    return errorFormularioCertificado(values, "Debes seleccionar una inspección.", {
+      id_inspeccion: "Selecciona una inspección válida.",
+    });
   }
 
   const supabase = await crearClienteServidor();
@@ -90,21 +144,30 @@ export async function crear_certificado(
   const { data: inspeccion } = await supabase
     .from("inspecciones")
     .select(
-      "id_inspeccion, id_cliente, id_lote, secuencia, status, es_ajuste, id_inspeccion_base, clientes(id_cliente, nombre, correo_contacto_cliente, correo_almacenista), lotes_produccion(id_lote, numero_lote, fecha_caducidad), resultados_analisis(*, parametros_calidad(id_parametro, clave, nombre))"
+      "id_inspeccion, id_cliente, id_lote, secuencia, status, es_ajuste, id_inspeccion_base, clientes(id_cliente, nombre, domicilio_fiscal, correo_contacto_cliente, correo_almacenista, direcciones(*)), lotes_produccion(id_lote, numero_lote, fecha_produccion, fecha_caducidad), resultados_analisis(*, parametros_calidad(id_parametro, clave, nombre))"
     )
     .eq("id_inspeccion", id_inspeccion)
     .maybeSingle();
 
   if (!inspeccion) {
-    return { error: "No se encontró la inspección seleccionada." };
+    return errorFormularioCertificado(
+      values,
+      "No se encontró la inspección seleccionada."
+    );
   }
 
   if (!inspeccion.id_cliente) {
-    return { error: "La inspección debe tener un cliente asociado para emitir certificado." };
+    return errorFormularioCertificado(
+      values,
+      "La inspección debe tener un cliente asociado para emitir certificado."
+    );
   }
 
   if (!inspeccion.resultados_analisis?.length) {
-    return { error: "La inspección no tiene resultados para certificar." };
+    return errorFormularioCertificado(
+      values,
+      "La inspección no tiene resultados para certificar."
+    );
   }
 
   const clienteRelacionado = Array.isArray(inspeccion.clientes)
@@ -113,6 +176,23 @@ export async function crear_certificado(
   const loteRelacionado = Array.isArray(inspeccion.lotes_produccion)
     ? inspeccion.lotes_produccion[0]
     : inspeccion.lotes_produccion;
+  const direccionesEntrega = Array.isArray(clienteRelacionado?.direcciones)
+    ? clienteRelacionado.direcciones
+    : [];
+  const direccionEntregaSeleccionada = id_direccion_entrega
+    ? direccionesEntrega.find((direccion) => direccion.id_direccion === id_direccion_entrega)
+    : null;
+
+  if (id_direccion_entrega && !direccionEntregaSeleccionada) {
+    return errorFormularioCertificado(
+      values,
+      "El domicilio de entrega seleccionado ya no está disponible.",
+      {
+        id_direccion_entrega: "Selecciona un domicilio de entrega válido.",
+      }
+    );
+  }
+
   const destinatarios = normalizarDestinatarios([
     correo_cliente || clienteRelacionado?.correo_contacto_cliente,
     correo_almacen || clienteRelacionado?.correo_almacenista,
@@ -127,14 +207,15 @@ export async function crear_certificado(
     .limit(1);
 
   if (existente?.length) {
-    return {
-      error: `La inspección ya cuenta con un certificado activo (${existente[0].folio ?? `#${existente[0].id_certificado}`}).`,
-    };
+    return errorFormularioCertificado(
+      values,
+      `La inspección ya cuenta con un certificado activo (${existente[0].folio ?? `#${existente[0].id_certificado}`}).`
+    );
   }
 
   const folio = await generarFolioCertificado(supabase);
   const nombreArchivo = `${folio}.pdf`;
-  const storagePath = `certificados/${nombreArchivo}`;
+  const storagePath = nombreArchivo;
 
   const { data: certificado, error } = await supabase
     .from("certificados_calidad")
@@ -143,13 +224,20 @@ export async function crear_certificado(
       id_cliente: inspeccion.id_cliente,
       id_lote: inspeccion.id_lote,
       id_inspeccion,
-      numero_orden_compra,
+      numero_pedido_cliente,
       cantidad_solicitada,
       cantidad_total_entrega,
       numero_factura,
       fecha_envio,
+      fecha_produccion:
+        fecha_produccion ?? loteRelacionado?.fecha_produccion ?? null,
       fecha_caducidad:
         fecha_caducidad ?? loteRelacionado?.fecha_caducidad ?? null,
+      domicilio_fiscal_snapshot: clienteRelacionado?.domicilio_fiscal ?? null,
+      domicilio_entrega_snapshot:
+        direccionEntregaSeleccionada?.direccion ?? null,
+      domicilio_entrega_etiqueta_snapshot:
+        direccionEntregaSeleccionada?.etiqueta ?? null,
       correo_cliente:
         correo_cliente ?? clienteRelacionado?.correo_contacto_cliente ?? null,
       correo_almacen:
@@ -158,6 +246,7 @@ export async function crear_certificado(
       status_envio: "pendiente",
       pdf_storage_path: storagePath,
       pdf_nombre_archivo: nombreArchivo,
+      pdf_version: PDF_CERTIFICADO_VERSION,
       observaciones,
       emitido_en: new Date().toISOString(),
       emitido_por: usuario.usuario.id,
@@ -168,7 +257,10 @@ export async function crear_certificado(
 
   if (error || !certificado) {
     console.error("[certificados][crear]", error);
-    return { error: "No fue posible emitir el certificado." };
+    return errorFormularioCertificado(
+      values,
+      "No fue posible emitir el certificado."
+    );
   }
 
   const resultadosSnapshot = inspeccion.resultados_analisis.map((resultado) => ({
@@ -194,7 +286,10 @@ export async function crear_certificado(
 
   if (errorResultados) {
     console.error("[certificados][resultados]", errorResultados);
-    return { error: "El certificado se creó, pero falló el snapshot de resultados." };
+    return errorFormularioCertificado(
+      values,
+      "El certificado se creó, pero falló el snapshot de resultados."
+    );
   }
 
   await supabase
@@ -209,27 +304,32 @@ export async function crear_certificado(
   let pdfPath = `/certificados/${certificado.id_certificado}/pdf`;
 
   try {
-    pdfContenido = await generarPdfCertificado(
-      construirPayloadPdfCertificado({
+    const pdfGenerado = await generarYGuardarPdfCertificado({
         ...certificado,
         folio,
         id_cliente: inspeccion.id_cliente,
         id_lote: inspeccion.id_lote,
         id_inspeccion,
-        numero_orden_compra,
+        numero_pedido_cliente,
         cantidad_solicitada,
         cantidad_total_entrega,
         numero_factura,
         fecha_envio,
+        fecha_produccion: fecha_produccion ?? loteRelacionado?.fecha_produccion ?? null,
         fecha_caducidad: fecha_caducidad ?? loteRelacionado?.fecha_caducidad ?? null,
+        domicilio_fiscal_snapshot: clienteRelacionado?.domicilio_fiscal ?? null,
+        domicilio_entrega_snapshot: direccionEntregaSeleccionada?.direccion ?? null,
+        domicilio_entrega_etiqueta_snapshot:
+          direccionEntregaSeleccionada?.etiqueta ?? null,
         correo_cliente:
           correo_cliente ?? clienteRelacionado?.correo_contacto_cliente ?? null,
         correo_almacen:
           correo_almacen ?? clienteRelacionado?.correo_almacenista ?? null,
         status_certificado: "emitido",
         status_envio: "pendiente",
-        pdf_storage_path: null,
+        pdf_storage_path: storagePath,
         pdf_nombre_archivo: nombreArchivo,
+        pdf_version: PDF_CERTIFICADO_VERSION,
         observaciones,
         emitido_en: new Date().toISOString(),
         creado_en: new Date().toISOString(),
@@ -248,7 +348,7 @@ export async function crear_certificado(
               numero_lote: loteRelacionado.numero_lote,
               id_producto: null,
               variedad: null,
-              fecha_produccion: null,
+              fecha_produccion: loteRelacionado.fecha_produccion ?? null,
               fecha_caducidad: loteRelacionado.fecha_caducidad ?? null,
               observaciones: null,
               creado_en: "",
@@ -267,12 +367,11 @@ export async function crear_certificado(
           id: indice + 1,
           ...resultado,
         })),
-      })
-    );
+      }, usuario.usuario.id);
 
-    const upload = await guardarPdfCertificado(nombreArchivo, pdfContenido);
-    if (upload) {
-      pdfPath = upload.path;
+    pdfContenido = pdfGenerado.contenido;
+    if (pdfGenerado.pdfPath) {
+      pdfPath = pdfGenerado.pdfPath;
     }
   } catch (errorPdf) {
     console.error("[certificados][pdf]", errorPdf);
@@ -282,6 +381,7 @@ export async function crear_certificado(
     .from("certificados_calidad")
     .update({
       pdf_storage_path: pdfPath,
+      pdf_version: PDF_CERTIFICADO_VERSION,
       actualizado_por: usuario.usuario.id,
     })
     .eq("id_certificado", certificado.id_certificado);
@@ -417,23 +517,22 @@ export async function enviar_certificado_cliente(formData: FormData) {
   }
 
   let pdfContenido: Uint8Array | null = null;
+  let pdfNombre =
+    certificado.pdf_nombre_archivo ||
+    `${certificado.folio || `certificado-${certificado.id_certificado}`}.pdf`;
 
-  if (
-    certificado.pdf_storage_path &&
-    !certificado.pdf_storage_path.startsWith("/")
-  ) {
+  if (!requiereRegenerarPdf(certificado) && certificado.pdf_storage_path) {
     pdfContenido = await descargarPdfCertificado(certificado.pdf_storage_path);
   }
 
   if (!pdfContenido) {
-    pdfContenido = await generarPdfCertificado(
-      construirPayloadPdfCertificado(certificado)
+    const regenerado = await generarYGuardarPdfCertificado(
+      certificado,
+      usuario.usuario.id
     );
+    pdfContenido = regenerado.contenido;
+    pdfNombre = regenerado.pdfNombre;
   }
-
-  const pdfNombre =
-    certificado.pdf_nombre_archivo ||
-    `${certificado.folio || `certificado-${certificado.id_certificado}`}.pdf`;
 
   try {
     await enviarCorreoCertificado({

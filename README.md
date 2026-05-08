@@ -17,13 +17,16 @@ NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
 SUPABASE_AUTH_REDIRECT_URL=
+POSTALIA=
+# opcional para apuntar a un endpoint distinto del default
+POSTALIA_BASE_URL=
 ```
 
 ## Base de datos en Supabase
 
 1. Abre el SQL Editor de tu proyecto de Supabase.
 2. Ejecuta el script [supabase/esquema.sql](/home/charly/Documents/Anahuac/10mo%20Semestre/DesarrolloSoftware/harinas-elizondo/supabase/esquema.sql).
-3. Crea primero la cuenta `superadmin@harinas-elizondo.local`; esa cuenta se aprueba sola y nace con rol `superadmin`.
+3. Crea primero la cuenta `superadmin@harinas-elizondo.local`; esa cuenta se aprueba sola y nace con rol `admin`.
 
 Si tienes confirmación de correo activa en Supabase, define `SUPABASE_AUTH_REDIRECT_URL` con la base pública de tu app, por ejemplo `http://localhost:3000`. El sistema agregará automáticamente `/auth/confirm`.
 
@@ -43,11 +46,14 @@ Abre [http://localhost:3000](http://localhost:3000).
 
 ## Roles
 
-- `superadmin`: acceso total
-- `admin`: aprueba usuarios y asigna `admin` u `operador`
-- `operador`: acceso normal al panel
+- `admin`: acceso total
+- `gerente_laboratorio`: acceso total
+- `gte_calidad`: acceso de gerencia de calidad
+- `gte_plantas`: acceso de gerencia de plantas
+- `dir_operaciones`: acceso de dirección de operaciones
+- `laboratorista`: acceso operativo al panel
 
-Los usuarios nuevos se registran como `operador` y quedan pendientes hasta aprobación.
+Los usuarios nuevos se registran como `laboratorista`, quedan con `status = pendiente` y sólo acceden al panel cuando un `admin` o `gerente_laboratorio` los activa.
 
 ## Comandos útiles
 

@@ -7,6 +7,10 @@ import {
   editar_equipo,
   type EstadoFormularioEquipo,
 } from "@/app/(privado)/equipos/acciones";
+import {
+  obtenerValor,
+  tieneErrorCampo,
+} from "@/lib/form-state";
 import type {
   EquipoConRelaciones,
   TipoEquipo,
@@ -47,9 +51,9 @@ export function FormularioEquipo({
         </Badge>
       </div>
 
-      {estado.error ? (
+      {estado.formError ? (
         <div className="mt-5 rounded-[22px] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {estado.error}
+          {estado.formError}
         </div>
       ) : null}
 
@@ -64,8 +68,13 @@ export function FormularioEquipo({
               Clave
             </span>
             <input
+              aria-invalid={tieneErrorCampo(estado.fieldErrors, "clave")}
               className="campo-formulario"
-              defaultValue={equipo?.clave ?? ""}
+              defaultValue={obtenerValor(
+                estado.values,
+                "clave",
+                equipo?.clave ?? ""
+              )}
               name="clave"
               placeholder="EQL-ALV-01"
               required
@@ -79,8 +88,13 @@ export function FormularioEquipo({
               Tipo de equipo
             </span>
             <select
+              aria-invalid={tieneErrorCampo(estado.fieldErrors, "tipo")}
               className="campo-formulario"
-              defaultValue={equipo?.tipo ?? "otro"}
+              defaultValue={obtenerValor(
+                estado.values,
+                "tipo",
+                equipo?.tipo ?? "otro"
+              )}
               name="tipo"
             >
               {tiposEquipo.map((tipo) => (
@@ -97,7 +111,11 @@ export function FormularioEquipo({
             </span>
             <input
               className="campo-formulario"
-              defaultValue={equipo?.descripcion_corta ?? ""}
+              defaultValue={obtenerValor(
+                estado.values,
+                "descripcion_corta",
+                equipo?.descripcion_corta ?? ""
+              )}
               name="descripcion_corta"
               placeholder="Alveógrafo principal"
               type="text"
@@ -110,8 +128,13 @@ export function FormularioEquipo({
             Descripción larga
           </span>
           <textarea
+            aria-invalid={tieneErrorCampo(estado.fieldErrors, "descripcion_larga")}
             className="campo-formulario min-h-28 resize-y"
-            defaultValue={equipo?.descripcion_larga ?? ""}
+            defaultValue={obtenerValor(
+              estado.values,
+              "descripcion_larga",
+              equipo?.descripcion_larga ?? ""
+            )}
             name="descripcion_larga"
             placeholder="Equipo para análisis reológico de harina y masa."
             required
@@ -125,7 +148,11 @@ export function FormularioEquipo({
             </span>
             <input
               className="campo-formulario"
-              defaultValue={equipo?.marca ?? ""}
+              defaultValue={obtenerValor(
+                estado.values,
+                "marca",
+                equipo?.marca ?? ""
+              )}
               name="marca"
               placeholder="Chopin"
               type="text"
@@ -137,7 +164,11 @@ export function FormularioEquipo({
             </span>
             <input
               className="campo-formulario"
-              defaultValue={equipo?.modelo ?? ""}
+              defaultValue={obtenerValor(
+                estado.values,
+                "modelo",
+                equipo?.modelo ?? ""
+              )}
               name="modelo"
               placeholder="AlveoLab"
               type="text"
@@ -149,7 +180,11 @@ export function FormularioEquipo({
             </span>
             <input
               className="campo-formulario"
-              defaultValue={equipo?.serie ?? ""}
+              defaultValue={obtenerValor(
+                estado.values,
+                "serie",
+                equipo?.serie ?? ""
+              )}
               name="serie"
               placeholder="ALV-2450"
               type="text"
@@ -161,7 +196,11 @@ export function FormularioEquipo({
             </span>
             <input
               className="campo-formulario"
-              defaultValue={equipo?.proveedor ?? ""}
+              defaultValue={obtenerValor(
+                estado.values,
+                "proveedor",
+                equipo?.proveedor ?? ""
+              )}
               name="proveedor"
               placeholder="Tecnosa"
               type="text"
@@ -175,22 +214,33 @@ export function FormularioEquipo({
               Fecha de adquisición
             </span>
             <input
+              aria-invalid={tieneErrorCampo(estado.fieldErrors, "fecha_adquisicion")}
               className="campo-formulario"
-              defaultValue={equipo?.fecha_adquisicion ?? ""}
+              defaultValue={obtenerValor(
+                estado.values,
+                "fecha_adquisicion",
+                equipo?.fecha_adquisicion ?? ""
+              )}
               name="fecha_adquisicion"
               type="date"
             />
           </label>
           <label className="block">
             <span className="mb-2 block text-sm font-medium text-slate-600">
-              Garantía
+              Garantía (meses)
             </span>
             <input
+              aria-invalid={tieneErrorCampo(estado.fieldErrors, "garantia_meses")}
               className="campo-formulario"
-              defaultValue={equipo?.garantia ?? ""}
-              name="garantia"
-              placeholder="24 meses"
-              type="text"
+              defaultValue={obtenerValor(
+                estado.values,
+                "garantia_meses",
+                equipo?.garantia_meses?.toString() ?? ""
+              )}
+              min="0"
+              name="garantia_meses"
+              placeholder="24"
+              type="number"
             />
           </label>
           <label className="block">
@@ -199,7 +249,12 @@ export function FormularioEquipo({
             </span>
             <input
               className="campo-formulario"
-              defaultValue={equipo?.vigencia_garantia ?? ""}
+              defaultValue={obtenerValor(
+                estado.values,
+                "vigencia_garantia",
+                equipo?.vigencia_garantia ?? ""
+              )}
+              disabled
               name="vigencia_garantia"
               type="date"
             />
@@ -210,7 +265,11 @@ export function FormularioEquipo({
             </span>
             <input
               className="campo-formulario"
-              defaultValue={equipo?.ubicacion ?? ""}
+              defaultValue={obtenerValor(
+                estado.values,
+                "ubicacion",
+                equipo?.ubicacion ?? ""
+              )}
               name="ubicacion"
               placeholder="Laboratorio central"
               type="text"
@@ -225,7 +284,11 @@ export function FormularioEquipo({
             </span>
             <input
               className="campo-formulario"
-              defaultValue={equipo?.responsable ?? ""}
+              defaultValue={obtenerValor(
+                estado.values,
+                "responsable",
+                equipo?.responsable ?? ""
+              )}
               name="responsable"
               placeholder="Jefe de laboratorio"
               type="text"
@@ -237,7 +300,11 @@ export function FormularioEquipo({
             </span>
             <input
               className="campo-formulario"
-              defaultValue={equipo?.mantenimiento ?? ""}
+              defaultValue={obtenerValor(
+                estado.values,
+                "mantenimiento",
+                equipo?.mantenimiento ?? ""
+              )}
               name="mantenimiento"
               placeholder="Calibración trimestral"
               type="text"

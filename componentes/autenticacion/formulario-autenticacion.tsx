@@ -10,6 +10,10 @@ import {
   type EstadoFormularioAutenticacion,
 } from "@/app/acciones/autenticacion";
 import { BotonEnvio } from "@/componentes/autenticacion/boton-envio";
+import {
+  obtenerValor,
+  tieneErrorCampo,
+} from "@/lib/form-state";
 
 const estadoInicial: EstadoFormularioAutenticacion = {};
 
@@ -36,7 +40,7 @@ export function FormularioAutenticacion({
 
   const estadoVisible = useMemo(() => {
     if (errorInicial && modo === "login") {
-      return { error: errorInicial };
+      return { formError: errorInicial };
     }
 
     if (modo === "registro") {
@@ -111,9 +115,9 @@ export function FormularioAutenticacion({
           </div>
         </div>
 
-        {estadoVisible.error ? (
+        {estadoVisible.formError ? (
           <div className="mt-5 rounded-[22px] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {estadoVisible.error}
+            {estadoVisible.formError}
           </div>
         ) : null}
 
@@ -130,8 +134,10 @@ export function FormularioAutenticacion({
                 Correo
               </span>
               <input
+                aria-invalid={tieneErrorCampo(estadoVisible.fieldErrors, "correo")}
                 className="campo-formulario"
                 name="correo"
+                defaultValue={obtenerValor(estadoVisible.values, "correo", "")}
                 placeholder="tu@correo.com"
                 required
                 type="email"
@@ -142,8 +148,17 @@ export function FormularioAutenticacion({
                 Contraseña
               </span>
               <input
+                aria-invalid={tieneErrorCampo(
+                  estadoVisible.fieldErrors,
+                  "contrasena"
+                )}
                 className="campo-formulario"
                 name="contrasena"
+                defaultValue={obtenerValor(
+                  estadoVisible.values,
+                  "contrasena",
+                  ""
+                )}
                 placeholder="********"
                 required
                 type="password"
@@ -167,8 +182,10 @@ export function FormularioAutenticacion({
                 Nombre
               </span>
               <input
+                aria-invalid={tieneErrorCampo(estadoVisible.fieldErrors, "nombre")}
                 className="campo-formulario"
                 name="nombre"
+                defaultValue={obtenerValor(estadoVisible.values, "nombre", "")}
                 placeholder="Nombre visible"
                 required
                 type="text"
@@ -179,8 +196,10 @@ export function FormularioAutenticacion({
                 Correo
               </span>
               <input
+                aria-invalid={tieneErrorCampo(estadoVisible.fieldErrors, "correo")}
                 className="campo-formulario"
                 name="correo"
+                defaultValue={obtenerValor(estadoVisible.values, "correo", "")}
                 placeholder="tu@correo.com"
                 required
                 type="email"
@@ -191,9 +210,18 @@ export function FormularioAutenticacion({
                 Contraseña
               </span>
               <input
+                aria-invalid={tieneErrorCampo(
+                  estadoVisible.fieldErrors,
+                  "contrasena"
+                )}
                 className="campo-formulario"
                 minLength={6}
                 name="contrasena"
+                defaultValue={obtenerValor(
+                  estadoVisible.values,
+                  "contrasena",
+                  ""
+                )}
                 placeholder="Mínimo 6 caracteres"
                 required
                 type="password"
@@ -210,8 +238,10 @@ export function FormularioAutenticacion({
                 Correo
               </span>
               <input
+                aria-invalid={tieneErrorCampo(estadoVisible.fieldErrors, "correo")}
                 className="campo-formulario"
                 name="correo"
+                defaultValue={obtenerValor(estadoVisible.values, "correo", "")}
                 placeholder="tu@correo.com"
                 required
                 type="email"

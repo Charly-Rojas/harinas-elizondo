@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { crearClienteAdmin } from "@/lib/supabase/admin";
 import { supabaseAdminConfigurado } from "@/lib/supabase/configuracion";
 import { crearClienteServidor } from "@/lib/supabase/servidor";
-import type { PerfilUsuario, RolUsuario } from "@/lib/tipos";
+import type { PerfilUsuario, RolUsuario, StatusUsuario } from "@/lib/tipos";
 
 export type { PerfilUsuario, RolUsuario } from "@/lib/tipos";
 
@@ -17,7 +17,7 @@ export type UsuarioAutenticado = {
 };
 
 export function es_administrador(rol: RolUsuario) {
-  return rol === "admin" || rol === "superadmin";
+  return rol === "admin" || rol === "gerente_laboratorio";
 }
 
 export function es_gerente(rol: RolUsuario) {
@@ -29,20 +29,19 @@ export function es_gerente(rol: RolUsuario) {
 }
 
 export function puede_asignar_rol(rolActor: RolUsuario, rolObjetivo: RolUsuario) {
-  if (rolActor === "superadmin") {
-    return true;
-  }
+  if (!es_administrador(rolActor)) return false;
+  return (
+    rolObjetivo === "admin" ||
+    rolObjetivo === "gerente_laboratorio" ||
+    rolObjetivo === "gte_calidad" ||
+    rolObjetivo === "gte_plantas" ||
+    rolObjetivo === "dir_operaciones" ||
+    rolObjetivo === "laboratorista"
+  );
+}
 
-  if (rolActor === "admin") {
-    return (
-      rolObjetivo === "gte_calidad" ||
-      rolObjetivo === "gte_plantas" ||
-      rolObjetivo === "dir_operaciones" ||
-      rolObjetivo === "operador"
-    );
-  }
-
-  return false;
+export function usuario_activo(perfil: Pick<PerfilUsuario, "aprobado" | "status">) {
+  return perfil.aprobado && perfil.status === "activo";
 }
 
 function nombreInicialUsuario(correo: string, nombre?: unknown) {
@@ -61,7 +60,9 @@ async function buscarPerfil(
 
   const { data: perfil } = await cliente
     .from("perfiles")
-    .select("id, correo, nombre, rol, aprobado, aprobado_en, aprobado_por, creado_en")
+    .select(
+      "id, correo, nombre, rol, aprobado, status, aprobado_en, aprobado_por, creado_en"
+    )
     .eq("id", idUsuario)
     .maybeSingle();
 
@@ -80,7 +81,7 @@ async function asegurar_perfil_faltante(usuario: {
   }
 
   const correo = usuario.email.trim().toLowerCase();
-  const esSuperadminInicial = correo === "superadmin@harinas-elizondo.local";
+  const esAdminInicial = correo === "superadmin@harinas-elizondo.local";
   const supabaseAdmin = crearClienteAdmin();
 
   const { error } = await supabaseAdmin.from("perfiles").upsert(
@@ -88,9 +89,10 @@ async function asegurar_perfil_faltante(usuario: {
       id: usuario.id,
       correo,
       nombre: nombreInicialUsuario(correo, usuario.user_metadata?.nombre),
-      rol: esSuperadminInicial ? "superadmin" : "operador",
-      aprobado: esSuperadminInicial,
-      aprobado_en: esSuperadminInicial ? new Date().toISOString() : null,
+      rol: esAdminInicial ? "admin" : "laboratorista",
+      aprobado: esAdminInicial,
+      status: esAdminInicial ? "activo" : "pendiente",
+      aprobado_en: esAdminInicial ? new Date().toISOString() : null,
       aprobado_por: null,
     },
     {
@@ -156,9 +158,25 @@ export async function requiere_sesion(): Promise<UsuarioAutenticado> {
 export async function requiere_admin(): Promise<UsuarioAutenticado> {
   const actual = await requiere_sesion();
 
-  if (!actual.perfil.aprobado || !es_administrador(actual.perfil.rol)) {
+  if (!usuario_activo(actual.perfil) || !es_administrador(actual.perfil.rol)) {
     redirect("/");
   }
 
   return actual;
+}
+
+export function status_usuario_desde_datos(
+  aprobado: boolean,
+  status: string | null | undefined
+): StatusUsuario {
+  if (
+    status === "pendiente" ||
+    status === "activo" ||
+    status === "rechazado" ||
+    status === "baja"
+  ) {
+    return status;
+  }
+
+  return aprobado ? "activo" : "pendiente";
 }

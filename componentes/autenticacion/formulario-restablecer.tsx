@@ -9,6 +9,7 @@ import {
   type EstadoFormularioAutenticacion,
 } from "@/app/acciones/autenticacion";
 import { BotonEnvio } from "@/componentes/autenticacion/boton-envio";
+import { obtenerValor, tieneErrorCampo } from "@/lib/form-state";
 
 const estadoInicial: EstadoFormularioAutenticacion = {};
 
@@ -61,9 +62,9 @@ export function FormularioRestablecer() {
           </div>
         ) : null}
 
-        {!errorCliente && estado.error ? (
+        {!errorCliente && estado.formError ? (
           <div className="mt-5 rounded-[22px] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {estado.error}
+            {estado.formError}
           </div>
         ) : null}
 
@@ -83,7 +84,9 @@ export function FormularioRestablecer() {
               Nueva contraseña
             </span>
             <input
+              aria-invalid={tieneErrorCampo(estado.fieldErrors, "contrasena")}
               className="campo-formulario"
+              defaultValue={obtenerValor(estado.values, "contrasena", "")}
               minLength={6}
               name="contrasena"
               required
@@ -96,7 +99,9 @@ export function FormularioRestablecer() {
               Confirmar contraseña
             </span>
             <input
+              aria-invalid={tieneErrorCampo(estado.fieldErrors, "confirmar")}
               className="campo-formulario"
+              defaultValue={obtenerValor(estado.values, "confirmar", "")}
               minLength={6}
               name="confirmar"
               required

@@ -1,12 +1,10 @@
-import { obtener_usuario_actual } from "@/lib/autorizacion";
+import { obtener_usuario_actual, usuario_activo } from "@/lib/autorizacion";
 import {
   descargarPdfCertificado,
+  generarYGuardarPdfCertificado,
   obtenerCertificadoDetalleConCliente,
+  requiereRegenerarPdf,
 } from "@/lib/certificados";
-import {
-  construirPayloadPdfCertificado,
-  generarPdfCertificado,
-} from "@/lib/pdf-certificados";
 import { crearClienteServidor } from "@/lib/supabase/servidor";
 
 export async function GET(
@@ -15,7 +13,7 @@ export async function GET(
 ) {
   const usuario = await obtener_usuario_actual();
 
-  if (!usuario?.perfil.aprobado) {
+  if (!usuario || !usuario_activo(usuario.perfil)) {
     return new Response("Unauthorized", { status: 401 });
   }
 
@@ -38,17 +36,14 @@ export async function GET(
 
   let contenido: Uint8Array | null = null;
 
-  if (
-    certificado.pdf_storage_path &&
-    !certificado.pdf_storage_path.startsWith("/")
-  ) {
+  if (!requiereRegenerarPdf(certificado) && certificado.pdf_storage_path) {
     contenido = await descargarPdfCertificado(certificado.pdf_storage_path);
   }
 
   if (!contenido) {
-    contenido = await generarPdfCertificado(
-      construirPayloadPdfCertificado(certificado)
-    );
+    contenido = (
+      await generarYGuardarPdfCertificado(certificado, usuario.usuario.id)
+    ).contenido;
   }
 
   const nombreArchivo =

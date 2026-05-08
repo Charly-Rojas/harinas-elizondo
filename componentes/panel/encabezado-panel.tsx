@@ -23,22 +23,17 @@ import {
   rutaActiva,
 } from "@/componentes/panel/navegacion-panel";
 import type { RolUsuario } from "@/lib/tipos";
-
-function obtenerColorRol(rol: RolUsuario) {
-  if (rol === "superadmin") return "indigo";
-  if (rol === "admin") return "blue";
-  return "gray";
-}
+import { obtenerColorRol, obtenerTextoRol } from "@/lib/usuarios";
 
 function obtenerIconoRol(rol: RolUsuario) {
   const iconos: Record<RolUsuario, React.ComponentType<{ className?: string }>> =
     {
-      superadmin: IconoMasterBall,
-      admin: IconoUltraBall,
+      admin: IconoMasterBall,
+      gerente_laboratorio: IconoUltraBall,
       gte_calidad: IconoGreatBall,
       gte_plantas: IconoSafariBall,
       dir_operaciones: IconoPremierBall,
-      operador: IconoPokeballNormal,
+      laboratorista: IconoPokeballNormal,
     };
 
   return iconos[rol] || IconoPokeballNormal;
@@ -142,7 +137,7 @@ export function EncabezadoPanel({
                   size="1"
                   variant="soft"
                 >
-                  {rol}
+                  {obtenerTextoRol(rol)}
                 </Badge>
               </div>
 
@@ -233,7 +228,7 @@ export function EncabezadoPanel({
                   size="1"
                   variant="soft"
                 >
-                  {rol}
+                  {obtenerTextoRol(rol)}
                 </Badge>
 
                 <form action={cerrar_sesion}>

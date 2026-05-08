@@ -6,7 +6,68 @@ begin
     where typnamespace = 'public'::regnamespace
       and typname = 'rol_usuario'
   ) then
-    create type public.rol_usuario as enum ('superadmin', 'admin', 'operador');
+    create type public.rol_usuario as enum (
+      'admin',
+      'gerente_laboratorio',
+      'gte_calidad',
+      'gte_plantas',
+      'dir_operaciones',
+      'laboratorista'
+    );
+  end if;
+end
+$$;
+
+do $$
+begin
+  if exists (
+    select 1
+    from pg_enum
+    where enumtypid = 'public.rol_usuario'::regtype
+      and enumlabel = 'operador'
+  ) and not exists (
+    select 1
+    from pg_enum
+    where enumtypid = 'public.rol_usuario'::regtype
+      and enumlabel = 'laboratorista'
+  ) then
+    alter type public.rol_usuario rename value 'operador' to 'laboratorista';
+  end if;
+
+  if not exists (
+    select 1
+    from pg_enum
+    where enumtypid = 'public.rol_usuario'::regtype
+      and enumlabel = 'gerente_laboratorio'
+  ) then
+    alter type public.rol_usuario add value 'gerente_laboratorio' after 'admin';
+  end if;
+
+  if not exists (
+    select 1
+    from pg_enum
+    where enumtypid = 'public.rol_usuario'::regtype
+      and enumlabel = 'gte_calidad'
+  ) then
+    alter type public.rol_usuario add value 'gte_calidad';
+  end if;
+
+  if not exists (
+    select 1
+    from pg_enum
+    where enumtypid = 'public.rol_usuario'::regtype
+      and enumlabel = 'gte_plantas'
+  ) then
+    alter type public.rol_usuario add value 'gte_plantas';
+  end if;
+
+  if not exists (
+    select 1
+    from pg_enum
+    where enumtypid = 'public.rol_usuario'::regtype
+      and enumlabel = 'dir_operaciones'
+  ) then
+    alter type public.rol_usuario add value 'dir_operaciones';
   end if;
 end
 $$;
@@ -15,12 +76,43 @@ create table if not exists public.perfiles (
   id uuid primary key references auth.users (id) on delete cascade,
   correo text not null unique,
   nombre text,
-  rol public.rol_usuario not null default 'operador',
+  rol public.rol_usuario not null default 'laboratorista',
   aprobado boolean not null default false,
+  status text not null default 'pendiente'
+    check (status in ('pendiente', 'activo', 'rechazado', 'baja')),
   aprobado_en timestamptz,
   aprobado_por uuid references auth.users (id),
   creado_en timestamptz not null default timezone('utc', now())
 );
+
+alter table public.perfiles
+  add column if not exists status text not null default 'pendiente';
+
+alter table public.perfiles
+  alter column rol set default 'laboratorista';
+
+update public.perfiles
+set rol = 'admin'
+where rol::text = 'superadmin';
+
+update public.perfiles
+set rol = 'laboratorista'
+where rol::text = 'operador';
+
+update public.perfiles
+set status = case
+  when aprobado = true then 'activo'
+  else 'pendiente'
+end
+where status is null
+   or status not in ('pendiente', 'activo', 'rechazado', 'baja');
+
+alter table public.perfiles
+  drop constraint if exists perfiles_status_check;
+
+alter table public.perfiles
+  add constraint perfiles_status_check
+  check (status in ('pendiente', 'activo', 'rechazado', 'baja'));
 
 create or replace function public.tocar_actualizado_en()
 returns trigger
@@ -44,6 +136,7 @@ as $$
     from public.perfiles
     where id = auth.uid()
       and aprobado = true
+      and status = 'activo'
   );
 $$;
 
@@ -59,7 +152,8 @@ as $$
     from public.perfiles
     where id = auth.uid()
       and aprobado = true
-      and rol in ('superadmin', 'admin')
+      and status = 'activo'
+      and rol in ('admin', 'gerente_laboratorio')
   );
 $$;
 
@@ -70,7 +164,7 @@ security definer
 set search_path = public
 as $$
 declare
-  es_superadmin_inicial boolean := lower(new.email) = 'superadmin@harinas-elizondo.local';
+  es_admin_inicial boolean := lower(new.email) = 'superadmin@harinas-elizondo.local';
 begin
   insert into public.perfiles (
     id,
@@ -78,6 +172,7 @@ begin
     nombre,
     rol,
     aprobado,
+    status,
     aprobado_en
   )
   values (
@@ -85,12 +180,16 @@ begin
     lower(new.email),
     coalesce(new.raw_user_meta_data ->> 'nombre', split_part(new.email, '@', 1)),
     case
-      when es_superadmin_inicial then 'superadmin'::public.rol_usuario
-      else 'operador'::public.rol_usuario
+      when es_admin_inicial then 'admin'::public.rol_usuario
+      else 'laboratorista'::public.rol_usuario
     end,
-    es_superadmin_inicial,
+    es_admin_inicial,
     case
-      when es_superadmin_inicial then timezone('utc', now())
+      when es_admin_inicial then 'activo'
+      else 'pendiente'
+    end,
+    case
+      when es_admin_inicial then timezone('utc', now())
       else null
     end
   )
@@ -126,6 +225,14 @@ create table if not exists public.clientes (
   rfc text not null unique,
   domicilio_fiscal text not null,
   domicilio_entrega text,
+  dom_fiscal_calle text,
+  dom_fiscal_numero_exterior text,
+  dom_fiscal_numero_interior text,
+  dom_fiscal_colonia text,
+  dom_fiscal_ciudad text,
+  dom_fiscal_estado text,
+  dom_fiscal_codigo_postal text,
+  dom_fiscal_pais text,
   contacto_certificado text,
   correo_contacto_cliente text,
   correo_almacenista text,
@@ -143,15 +250,41 @@ create table if not exists public.clientes (
   constraint clientes_id_cliente_chk check (id_cliente between 100000 and 999999)
 );
 
+alter table public.clientes add column if not exists dom_fiscal_calle text;
+alter table public.clientes add column if not exists dom_fiscal_numero_exterior text;
+alter table public.clientes add column if not exists dom_fiscal_numero_interior text;
+alter table public.clientes add column if not exists dom_fiscal_colonia text;
+alter table public.clientes add column if not exists dom_fiscal_ciudad text;
+alter table public.clientes add column if not exists dom_fiscal_estado text;
+alter table public.clientes add column if not exists dom_fiscal_codigo_postal text;
+alter table public.clientes add column if not exists dom_fiscal_pais text;
+
 create table if not exists public.direcciones (
   id_direccion bigint generated by default as identity primary key,
   id_cliente integer not null references public.clientes (id_cliente) on delete cascade,
   etiqueta text not null default 'entrega',
   direccion text not null,
+  calle text,
+  numero_exterior text,
+  numero_interior text,
+  colonia text,
+  ciudad text,
+  estado text,
+  codigo_postal text,
+  pais text,
   activo boolean not null default true,
   creado_en timestamptz not null default timezone('utc', now()),
   actualizado_en timestamptz not null default timezone('utc', now())
 );
+
+alter table public.direcciones add column if not exists calle text;
+alter table public.direcciones add column if not exists numero_exterior text;
+alter table public.direcciones add column if not exists numero_interior text;
+alter table public.direcciones add column if not exists colonia text;
+alter table public.direcciones add column if not exists ciudad text;
+alter table public.direcciones add column if not exists estado text;
+alter table public.direcciones add column if not exists codigo_postal text;
+alter table public.direcciones add column if not exists pais text;
 
 create table if not exists public.param_ref_cliente (
   id bigint generated by default as identity primary key,
@@ -189,6 +322,7 @@ create table if not exists public.equipos_laboratorio (
   proveedor text,
   fecha_adquisicion date,
   garantia text,
+  garantia_meses integer,
   vigencia_garantia date,
   ubicacion text,
   responsable text,
@@ -202,11 +336,22 @@ create table if not exists public.equipos_laboratorio (
   actualizado_por uuid references auth.users (id)
 );
 
+alter table public.equipos_laboratorio
+  add column if not exists garantia_meses integer;
+
+update public.equipos_laboratorio
+set garantia_meses = substring(garantia from '([0-9]+)')::integer
+where garantia_meses is null
+  and garantia is not null
+  and garantia ~ '[0-9]+';
+
 create table if not exists public.parametros_calidad (
   id_parametro bigint generated by default as identity primary key,
   clave text not null unique,
   nombre text not null,
   unidad_medida text,
+  lim_min_global numeric(12, 4),
+  lim_max_global numeric(12, 4),
   equipo_origen text not null default 'otro'
     check (equipo_origen in ('alveografo', 'farinografo', 'otro')),
   lim_min_global numeric(12, 4),
@@ -237,6 +382,22 @@ add constraint parametros_calidad_limites_globales_chk check (
   or lim_max_global is null
   or lim_min_global <= lim_max_global
 );
+
+alter table public.parametros_calidad
+  add column if not exists lim_min_global numeric(12, 4);
+
+alter table public.parametros_calidad
+  add column if not exists lim_max_global numeric(12, 4);
+
+alter table public.parametros_calidad
+  drop constraint if exists parametros_calidad_limites_chk;
+
+alter table public.parametros_calidad
+  add constraint parametros_calidad_limites_chk check (
+    lim_min_global is null
+    or lim_max_global is null
+    or lim_min_global <= lim_max_global
+  );
 
 create table if not exists public.equipos_parametros (
   id bigint generated by default as identity primary key,
@@ -329,7 +490,7 @@ create table if not exists public.resultados_analisis (
   lim_min_aplicado numeric(12, 4),
   lim_max_aplicado numeric(12, 4),
   origen_limites text not null default 'internacional'
-    check (origen_limites in ('internacional', 'cliente', 'interno')),
+    check (origen_limites in ('internacional', 'cliente', 'global', 'interno')),
   desviacion numeric(12, 4),
   dentro_especificacion boolean,
   observaciones text,
@@ -354,12 +515,16 @@ create table if not exists public.certificados_calidad (
   id_cliente integer not null references public.clientes (id_cliente) on delete restrict,
   id_lote bigint not null references public.lotes_produccion (id_lote) on delete restrict,
   id_inspeccion bigint not null references public.inspecciones (id_inspeccion) on delete restrict,
-  numero_orden_compra text,
+  numero_pedido_cliente text,
   cantidad_solicitada numeric(12, 2),
   cantidad_total_entrega numeric(12, 2),
   numero_factura text,
   fecha_envio date,
+  fecha_produccion date,
   fecha_caducidad date,
+  domicilio_fiscal_snapshot text,
+  domicilio_entrega_snapshot text,
+  domicilio_entrega_etiqueta_snapshot text,
   correo_cliente text,
   correo_almacen text,
   status_certificado text not null default 'borrador'
@@ -368,6 +533,7 @@ create table if not exists public.certificados_calidad (
     check (status_envio in ('pendiente', 'enviado', 'fallido')),
   pdf_storage_path text,
   pdf_nombre_archivo text,
+  pdf_version integer not null default 1,
   observaciones text,
   emitido_en timestamptz,
   creado_en timestamptz not null default timezone('utc', now()),
@@ -375,6 +541,45 @@ create table if not exists public.certificados_calidad (
   emitido_por uuid references auth.users (id),
   actualizado_por uuid references auth.users (id)
 );
+
+do $$
+begin
+  if exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'certificados_calidad'
+      and column_name = 'numero_orden_compra'
+  ) and not exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'certificados_calidad'
+      and column_name = 'numero_pedido_cliente'
+  ) then
+    alter table public.certificados_calidad
+      rename column numero_orden_compra to numero_pedido_cliente;
+  end if;
+end
+$$;
+
+alter table public.certificados_calidad
+  add column if not exists numero_pedido_cliente text;
+
+alter table public.certificados_calidad
+  add column if not exists fecha_produccion date;
+
+alter table public.certificados_calidad
+  add column if not exists domicilio_fiscal_snapshot text;
+
+alter table public.certificados_calidad
+  add column if not exists domicilio_entrega_snapshot text;
+
+alter table public.certificados_calidad
+  add column if not exists domicilio_entrega_etiqueta_snapshot text;
+
+alter table public.certificados_calidad
+  add column if not exists pdf_version integer not null default 1;
 
 create table if not exists public.certificado_resultados (
   id bigint generated by default as identity primary key,

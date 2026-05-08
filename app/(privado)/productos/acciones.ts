@@ -3,14 +3,40 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requiere_sesion } from "@/lib/autorizacion";
+import type { FormState } from "@/lib/form-state";
 import { crearClienteServidor } from "@/lib/supabase/servidor";
 
-export type EstadoFormularioProducto = {
-  error?: string;
+type ValoresFormularioProducto = {
+  id_producto: string;
+  clave: string;
+  nombre: string;
+  descripcion: string;
 };
+
+export type EstadoFormularioProducto = FormState<
+  ValoresFormularioProducto,
+  keyof ValoresFormularioProducto
+>;
 
 function limpiar(valor: FormDataEntryValue | null) {
   return String(valor ?? "").trim();
+}
+
+function extraerValores(formData: FormData): ValoresFormularioProducto {
+  return {
+    id_producto: limpiar(formData.get("id_producto")),
+    clave: limpiar(formData.get("clave")).toUpperCase(),
+    nombre: limpiar(formData.get("nombre")),
+    descripcion: limpiar(formData.get("descripcion")),
+  };
+}
+
+function errorFormulario(
+  values: ValoresFormularioProducto,
+  formError: string,
+  fieldErrors?: EstadoFormularioProducto["fieldErrors"]
+): EstadoFormularioProducto {
+  return { formError, fieldErrors, values };
 }
 
 export async function crear_producto(
@@ -19,12 +45,21 @@ export async function crear_producto(
 ): Promise<EstadoFormularioProducto> {
   await requiere_sesion();
 
-  const clave = limpiar(formData.get("clave")).toUpperCase();
-  const nombre = limpiar(formData.get("nombre"));
-  const descripcion = limpiar(formData.get("descripcion")) || null;
+  const values = extraerValores(formData);
+  const clave = values.clave;
+  const nombre = values.nombre;
+  const descripcion = values.descripcion || null;
 
-  if (!clave) return { error: "La clave es obligatoria." };
-  if (!nombre) return { error: "El nombre es obligatorio." };
+  if (!clave) {
+    return errorFormulario(values, "La clave es obligatoria.", {
+      clave: "Captura la clave del producto.",
+    });
+  }
+  if (!nombre) {
+    return errorFormulario(values, "El nombre es obligatorio.", {
+      nombre: "Captura el nombre del producto.",
+    });
+  }
 
   const supabase = await crearClienteServidor();
 
@@ -35,7 +70,9 @@ export async function crear_producto(
     .maybeSingle();
 
   if (existente) {
-    return { error: "Ya existe un producto con esa clave." };
+    return errorFormulario(values, "Ya existe un producto con esa clave.", {
+      clave: "Esa clave ya esta registrada.",
+    });
   }
 
   const { error } = await supabase.from("productos").insert({
@@ -47,7 +84,7 @@ export async function crear_producto(
 
   if (error) {
     console.error("[productos][crear]", error);
-    return { error: "No fue posible registrar el producto." };
+    return errorFormulario(values, "No fue posible registrar el producto.");
   }
 
   revalidatePath("/productos");
@@ -61,14 +98,23 @@ export async function editar_producto(
 ): Promise<EstadoFormularioProducto> {
   await requiere_sesion();
 
-  const id_producto = parseInt(limpiar(formData.get("id_producto")), 10);
-  const clave = limpiar(formData.get("clave")).toUpperCase();
-  const nombre = limpiar(formData.get("nombre"));
-  const descripcion = limpiar(formData.get("descripcion")) || null;
+  const values = extraerValores(formData);
+  const id_producto = parseInt(values.id_producto, 10);
+  const clave = values.clave;
+  const nombre = values.nombre;
+  const descripcion = values.descripcion || null;
 
-  if (!id_producto) return { error: "Producto inválido." };
-  if (!clave) return { error: "La clave es obligatoria." };
-  if (!nombre) return { error: "El nombre es obligatorio." };
+  if (!id_producto) return errorFormulario(values, "Producto inválido.");
+  if (!clave) {
+    return errorFormulario(values, "La clave es obligatoria.", {
+      clave: "Captura la clave del producto.",
+    });
+  }
+  if (!nombre) {
+    return errorFormulario(values, "El nombre es obligatorio.", {
+      nombre: "Captura el nombre del producto.",
+    });
+  }
 
   const supabase = await crearClienteServidor();
 
@@ -80,7 +126,9 @@ export async function editar_producto(
     .maybeSingle();
 
   if (existente) {
-    return { error: "Ya existe otro producto con esa clave." };
+    return errorFormulario(values, "Ya existe otro producto con esa clave.", {
+      clave: "Esa clave ya esta registrada.",
+    });
   }
 
   const { error } = await supabase
@@ -94,7 +142,7 @@ export async function editar_producto(
 
   if (error) {
     console.error("[productos][editar]", error);
-    return { error: "No fue posible actualizar el producto." };
+    return errorFormulario(values, "No fue posible actualizar el producto.");
   }
 
   revalidatePath("/productos");

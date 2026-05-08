@@ -3,11 +3,19 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { crearClienteServidor } from "@/lib/supabase/servidor";
+import type { FormState } from "@/lib/form-state";
 
-export type EstadoFormularioAutenticacion = {
-  error?: string;
-  exito?: string;
+type ValoresFormularioAutenticacion = {
+  nombre: string;
+  correo: string;
+  contrasena: string;
+  confirmar: string;
 };
+
+export type EstadoFormularioAutenticacion = FormState<
+  ValoresFormularioAutenticacion,
+  keyof ValoresFormularioAutenticacion
+>;
 
 type ErrorSupabase = {
   message?: string;
@@ -22,6 +30,14 @@ function limpiarTexto(valor: FormDataEntryValue | null) {
 
 function normalizarCorreo(valor: FormDataEntryValue | null) {
   return limpiarTexto(valor).toLowerCase();
+}
+
+function errorFormulario(
+  values: ValoresFormularioAutenticacion,
+  formError: string,
+  fieldErrors?: EstadoFormularioAutenticacion["fieldErrors"]
+): EstadoFormularioAutenticacion {
+  return { formError, fieldErrors, values };
 }
 
 function construirMensajeErrorSupabase(error: ErrorSupabase | null | undefined) {
@@ -120,11 +136,18 @@ export async function iniciar_sesion(
 ): Promise<EstadoFormularioAutenticacion> {
   const correo = normalizarCorreo(formData.get("correo"));
   const contrasena = limpiarTexto(formData.get("contrasena"));
+  const values = {
+    nombre: "",
+    correo,
+    contrasena,
+    confirmar: "",
+  };
 
   if (!correo || !contrasena) {
-    return {
-      error: "Completa correo y contraseña.",
-    };
+    return errorFormulario(values, "Completa correo y contraseña.", {
+      correo: !correo ? "Captura tu correo." : undefined,
+      contrasena: !contrasena ? "Captura tu contraseña." : undefined,
+    });
   }
 
   const supabase = await crearClienteServidor();
@@ -142,9 +165,7 @@ export async function iniciar_sesion(
       name: error.name,
     });
 
-    return {
-      error: construirMensajeErrorSupabase(error),
-    };
+    return errorFormulario(values, construirMensajeErrorSupabase(error));
   }
 
   revalidatePath("/", "layout");
@@ -158,11 +179,19 @@ export async function registrar_usuario(
   const nombre = limpiarTexto(formData.get("nombre"));
   const correo = normalizarCorreo(formData.get("correo"));
   const contrasena = limpiarTexto(formData.get("contrasena"));
+  const values = {
+    nombre,
+    correo,
+    contrasena,
+    confirmar: "",
+  };
 
   if (!nombre || !correo || !contrasena) {
-    return {
-      error: "Completa nombre, correo y contraseña.",
-    };
+    return errorFormulario(values, "Completa nombre, correo y contraseña.", {
+      nombre: !nombre ? "Captura tu nombre." : undefined,
+      correo: !correo ? "Captura tu correo." : undefined,
+      contrasena: !contrasena ? "Captura tu contraseña." : undefined,
+    });
   }
 
   const supabase = await crearClienteServidor();
@@ -189,9 +218,7 @@ export async function registrar_usuario(
       emailRedirectTo,
     });
 
-    return {
-      error: construirMensajeErrorSupabase(error),
-    };
+    return errorFormulario(values, construirMensajeErrorSupabase(error));
   }
 
   console.info("[supabase][registro_ok]", {
@@ -204,10 +231,10 @@ export async function registrar_usuario(
   });
 
   if (correoYaExisteEnRespuesta(data)) {
-    return {
-      error:
-        "Ese correo ya está registrado en Harinas Elizondo. Inicia sesión o usa otro correo.",
-    };
+    return errorFormulario(
+      values,
+      "Ese correo ya está registrado en Harinas Elizondo. Inicia sesión o usa otro correo."
+    );
   }
 
   revalidatePath("/", "layout");
@@ -227,9 +254,17 @@ export async function solicitar_recuperacion(
   formData: FormData
 ): Promise<EstadoFormularioAutenticacion> {
   const correo = normalizarCorreo(formData.get("correo"));
+  const values = {
+    nombre: "",
+    correo,
+    contrasena: "",
+    confirmar: "",
+  };
 
   if (!correo) {
-    return { error: "Ingresa tu correo electrónico." };
+    return errorFormulario(values, "Ingresa tu correo electrónico.", {
+      correo: "Captura tu correo.",
+    });
   }
 
   const supabase = await crearClienteServidor();
@@ -244,7 +279,7 @@ export async function solicitar_recuperacion(
       correo,
       message: error.message,
     });
-    return { error: construirMensajeErrorSupabase(error) };
+    return errorFormulario(values, construirMensajeErrorSupabase(error));
   }
 
   return {
@@ -259,13 +294,27 @@ export async function restablecer_contrasena(
 ): Promise<EstadoFormularioAutenticacion> {
   const contrasena = limpiarTexto(formData.get("contrasena"));
   const confirmar = limpiarTexto(formData.get("confirmar"));
+  const values = {
+    nombre: "",
+    correo: "",
+    contrasena,
+    confirmar,
+  };
 
   if (!contrasena || contrasena.length < 6) {
-    return { error: "La contraseña debe tener al menos 6 caracteres." };
+    return errorFormulario(
+      values,
+      "La contraseña debe tener al menos 6 caracteres.",
+      {
+        contrasena: "La contraseña debe tener al menos 6 caracteres.",
+      }
+    );
   }
 
   if (contrasena !== confirmar) {
-    return { error: "Las contraseñas no coinciden." };
+    return errorFormulario(values, "Las contraseñas no coinciden.", {
+      confirmar: "La confirmación no coincide.",
+    });
   }
 
   const supabase = await crearClienteServidor();
@@ -273,7 +322,7 @@ export async function restablecer_contrasena(
 
   if (error) {
     console.error("[supabase][restablecer]", { message: error.message });
-    return { error: construirMensajeErrorSupabase(error) };
+    return errorFormulario(values, construirMensajeErrorSupabase(error));
   }
 
   return { exito: "Contraseña actualizada correctamente." };

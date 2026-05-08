@@ -8,6 +8,10 @@ import {
   editar_inspeccion,
   type EstadoFormularioInspeccion,
 } from "@/app/(privado)/inspecciones/acciones";
+import {
+  obtenerValor,
+  tieneErrorCampo,
+} from "@/lib/form-state";
 import type {
   EquipoConRelaciones,
   InspeccionConRelaciones,
@@ -68,23 +72,36 @@ export function FormularioInspeccion({
         : [],
     [origen]
   );
-  const [resultados, setResultados] = useState<ResultadoFila[]>(resultadosIniciales);
+  const resultadosEstado = useMemo<ResultadoFila[] | null>(() => {
+    if (!estado.values?.resultados_json) return null;
+
+    try {
+      const datos = JSON.parse(estado.values.resultados_json) as ResultadoFila[];
+      return Array.isArray(datos) ? datos : null;
+    } catch {
+      return null;
+    }
+  }, [estado.values]);
+  const [resultadosEditados, setResultadosEditados] = useState<
+    ResultadoFila[] | null
+  >(null);
+  const resultados = resultadosEditados ?? resultadosEstado ?? resultadosIniciales;
 
   function actualizarFila(
     indice: number,
     campo: keyof ResultadoFila,
     valor: string
   ) {
-    setResultados((actuales) =>
-      actuales.map((fila, i) =>
+    setResultadosEditados((actuales) =>
+      (actuales ?? resultados).map((fila, i) =>
         i === indice ? { ...fila, [campo]: valor } : fila
       )
     );
   }
 
   function agregarFila() {
-    setResultados((actuales) => [
-      ...actuales,
+    setResultadosEditados((actuales) => [
+      ...(actuales ?? resultados),
       {
         id_parametro: "",
         id_equipo: "",
@@ -95,7 +112,9 @@ export function FormularioInspeccion({
   }
 
   function eliminarFila(indice: number) {
-    setResultados((actuales) => actuales.filter((_, i) => i !== indice));
+    setResultadosEditados((actuales) =>
+      (actuales ?? resultados).filter((_, i) => i !== indice)
+    );
   }
 
   return (
@@ -124,9 +143,9 @@ export function FormularioInspeccion({
         </Badge>
       </div>
 
-      {estado.error ? (
+      {estado.formError ? (
         <div className="mt-5 rounded-[22px] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {estado.error}
+          {estado.formError}
         </div>
       ) : null}
 
@@ -159,8 +178,13 @@ export function FormularioInspeccion({
               Lote
             </span>
             <select
+              aria-invalid={tieneErrorCampo(estado.fieldErrors, "id_lote")}
               className="campo-formulario"
-              defaultValue={origen?.id_lote ?? ""}
+              defaultValue={obtenerValor(
+                estado.values,
+                "id_lote",
+                origen?.id_lote?.toString() ?? ""
+              )}
               name="id_lote"
               required
             >
@@ -179,7 +203,11 @@ export function FormularioInspeccion({
             </span>
             <select
               className="campo-formulario"
-              defaultValue={origen?.id_cliente ?? ""}
+              defaultValue={obtenerValor(
+                estado.values,
+                "id_cliente",
+                origen?.id_cliente?.toString() ?? ""
+              )}
               name="id_cliente"
             >
               <option value="">Sin cliente asociado</option>
@@ -197,7 +225,11 @@ export function FormularioInspeccion({
             </span>
             <textarea
               className="campo-formulario min-h-28 resize-y"
-              defaultValue={origen?.observaciones ?? ""}
+              defaultValue={obtenerValor(
+                estado.values,
+                "observaciones",
+                origen?.observaciones ?? ""
+              )}
               name="observaciones"
               placeholder="Contexto del análisis, notas del lote o condiciones especiales."
             />
@@ -210,8 +242,13 @@ export function FormularioInspeccion({
               Motivo del ajuste
             </span>
             <textarea
+              aria-invalid={tieneErrorCampo(estado.fieldErrors, "motivo_ajuste")}
               className="campo-formulario min-h-24 resize-y"
-              defaultValue={inspeccionBase?.motivo_ajuste ?? ""}
+              defaultValue={obtenerValor(
+                estado.values,
+                "motivo_ajuste",
+                inspeccionBase?.motivo_ajuste ?? ""
+              )}
               name="motivo_ajuste"
               placeholder="Explica por qué se corrige o repite el análisis y qué cambió respecto a la inspección base."
               required

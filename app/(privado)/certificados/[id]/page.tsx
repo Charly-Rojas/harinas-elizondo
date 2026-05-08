@@ -39,7 +39,7 @@ export default async function PaginaDetalleCertificado({
   const { data } = await supabase
     .from("certificados_calidad")
     .select(
-      "*, clientes(id_cliente, nombre), lotes_produccion(id_lote, numero_lote, fecha_produccion, fecha_caducidad, productos(*)), inspecciones(id_inspeccion, secuencia, es_ajuste, id_inspeccion_base), certificado_resultados(*)"
+      "*, clientes(id_cliente, nombre, domicilio_fiscal), lotes_produccion(id_lote, numero_lote, fecha_produccion, fecha_caducidad, productos(*)), inspecciones(id_inspeccion, secuencia, es_ajuste, id_inspeccion_base), certificado_resultados(*)"
     )
     .eq("id_certificado", idCertificado)
     .maybeSingle();
@@ -144,14 +144,20 @@ export default async function PaginaDetalleCertificado({
             </p>
           </div>
           <div className="rounded-[22px] border border-slate-200/80 bg-white/80 p-4">
-            <p className="text-sm font-medium text-slate-500">Orden de compra</p>
+            <p className="text-sm font-medium text-slate-500">Pedido cliente</p>
             <p className="mt-2 text-base font-semibold text-slate-900">
-              {certificado.numero_orden_compra || "-"}
+              {certificado.numero_pedido_cliente || "-"}
             </p>
           </div>
         </div>
 
-        <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <div className="rounded-[22px] border border-slate-200/80 bg-white/80 p-4">
+            <p className="text-sm font-medium text-slate-500">Producción</p>
+            <p className="mt-2 text-base font-semibold text-slate-900">
+              {certificado.fecha_produccion || certificado.lotes_produccion?.fecha_produccion || "-"}
+            </p>
+          </div>
           <div className="rounded-[22px] border border-slate-200/80 bg-white/80 p-4">
             <p className="text-sm font-medium text-slate-500">Cantidad solicitada</p>
             <p className="mt-2 text-base font-semibold text-slate-900">
@@ -170,6 +176,29 @@ export default async function PaginaDetalleCertificado({
               {certificado.fecha_caducidad || certificado.lotes_produccion?.fecha_caducidad || "-"}
             </p>
           </div>
+        </div>
+
+        <div className="mt-6 grid gap-4 md:grid-cols-2">
+          <div className="rounded-[22px] border border-slate-200/80 bg-white/80 p-4">
+            <p className="text-sm font-medium text-slate-500">Domicilio fiscal</p>
+            <p className="mt-2 text-sm leading-6 text-slate-700">
+              {certificado.domicilio_fiscal_snapshot || certificado.clientes?.domicilio_fiscal || "-"}
+            </p>
+          </div>
+
+          {certificado.domicilio_entrega_snapshot ? (
+            <div className="rounded-[22px] border border-slate-200/80 bg-white/80 p-4">
+              <p className="text-sm font-medium text-slate-500">
+                Domicilio de entrega
+              </p>
+              <p className="mt-2 text-sm leading-6 text-slate-700">
+                {certificado.domicilio_entrega_etiqueta_snapshot
+                  ? `${certificado.domicilio_entrega_etiqueta_snapshot}: `
+                  : ""}
+                {certificado.domicilio_entrega_snapshot}
+              </p>
+            </div>
+          ) : null}
         </div>
 
         <div className="mt-8 overflow-x-auto">

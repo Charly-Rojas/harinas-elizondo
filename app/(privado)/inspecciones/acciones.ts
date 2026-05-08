@@ -4,12 +4,24 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requiere_sesion } from "@/lib/autorizacion";
 import { registrarAuditoria } from "@/lib/auditoria";
+import type { FormState } from "@/lib/form-state";
 import { crearClienteServidor } from "@/lib/supabase/servidor";
 import type { OrigenLimites } from "@/lib/tipos-dominio";
 
-export type EstadoFormularioInspeccion = {
-  error?: string;
+type ValoresFormularioInspeccion = {
+  id_inspeccion: string;
+  id_inspeccion_base: string;
+  id_lote: string;
+  id_cliente: string;
+  motivo_ajuste: string;
+  observaciones: string;
+  resultados_json: string;
 };
+
+export type EstadoFormularioInspeccion = FormState<
+  ValoresFormularioInspeccion,
+  keyof ValoresFormularioInspeccion
+>;
 
 type ResultadoFormulario = {
   id_parametro: number;
@@ -26,6 +38,26 @@ function numeroOpcional(valor: string) {
   if (!valor) return null;
   const numero = Number(valor);
   return Number.isFinite(numero) ? numero : null;
+}
+
+function extraerValores(formData: FormData): ValoresFormularioInspeccion {
+  return {
+    id_inspeccion: limpiar(formData.get("id_inspeccion")),
+    id_inspeccion_base: limpiar(formData.get("id_inspeccion_base")),
+    id_lote: limpiar(formData.get("id_lote")),
+    id_cliente: limpiar(formData.get("id_cliente")),
+    motivo_ajuste: limpiar(formData.get("motivo_ajuste")),
+    observaciones: limpiar(formData.get("observaciones")),
+    resultados_json: limpiar(formData.get("resultados_json")),
+  };
+}
+
+function errorFormulario(
+  values: ValoresFormularioInspeccion,
+  formError: string,
+  fieldErrors?: EstadoFormularioInspeccion["fieldErrors"]
+): EstadoFormularioInspeccion {
+  return { formError, fieldErrors, values };
 }
 
 function parsearResultados(formData: FormData) {
@@ -183,21 +215,29 @@ async function construirResultadosPersistencia(
       resultado.id_equipo !== null
         ? equiposParametrosMap.get(`${resultado.id_equipo}:${resultado.id_parametro}`)
         : undefined;
+    const limiteGlobal = parametro
+      ? {
+          lim_min_global: parametro.lim_min_global,
+          lim_max_global: parametro.lim_max_global,
+        }
+      : null;
 
     const lim_min_aplicado =
       refCliente?.lim_min ??
       refEquipo?.lim_min_internacional ??
-      parametro?.lim_min_global ??
+      limiteGlobal?.lim_min_global ??
       null;
     const lim_max_aplicado =
       refCliente?.lim_max ??
       refEquipo?.lim_max_internacional ??
-      parametro?.lim_max_global ??
+      limiteGlobal?.lim_max_global ??
       null;
     const origen_limites: OrigenLimites = refCliente
       ? "cliente"
       : refEquipo
         ? "internacional"
+        : limiteGlobal?.lim_min_global != null || limiteGlobal?.lim_max_global != null
+          ? "global"
         : "interno";
     const evaluacion = evaluarResultado(
       resultado.valor,
@@ -269,17 +309,22 @@ export async function crear_inspeccion(
 ): Promise<EstadoFormularioInspeccion> {
   const usuario = await requiere_sesion();
 
-  const id_lote = parseInt(limpiar(formData.get("id_lote")), 10);
-  const id_cliente = numeroOpcional(limpiar(formData.get("id_cliente")));
-  const observaciones = limpiar(formData.get("observaciones")) || null;
+  const values = extraerValores(formData);
+  const id_lote = parseInt(values.id_lote, 10);
+  const id_cliente = numeroOpcional(values.id_cliente);
+  const observaciones = values.observaciones || null;
 
   if (!id_lote) {
-    return { error: "Debes seleccionar un lote." };
+    return errorFormulario(values, "Debes seleccionar un lote.", {
+      id_lote: "Selecciona un lote valido.",
+    });
   }
 
   const { error: errorResultados, resultados } = parsearResultados(formData);
   if (errorResultados) {
-    return { error: errorResultados };
+    return errorFormulario(values, errorResultados, {
+      resultados_json: "Corrige los resultados capturados.",
+    });
   }
 
   const supabase = await crearClienteServidor();
@@ -290,13 +335,17 @@ export async function crear_inspeccion(
     secuencia = await siguienteSecuenciaLote(supabase, id_lote);
   } catch (errorSecuencia) {
     console.error("[inspecciones][secuencia]", errorSecuencia);
-    return { error: "No fue posible calcular la secuencia de inspección." };
+    return errorFormulario(
+      values,
+      "No fue posible calcular la secuencia de inspección."
+    );
   }
 
   if (!secuencia) {
-    return {
-      error: "El lote ya alcanzó la secuencia máxima de inspecciones (Z).",
-    };
+    return errorFormulario(
+      values,
+      "El lote ya alcanzó la secuencia máxima de inspecciones (Z)."
+    );
   }
 
   const { data: inspeccion, error } = await supabase
@@ -317,7 +366,7 @@ export async function crear_inspeccion(
 
   if (error || !inspeccion) {
     console.error("[inspecciones][crear]", error);
-    return { error: "No fue posible crear la inspección." };
+    return errorFormulario(values, "No fue posible crear la inspección.");
   }
 
   try {
@@ -330,10 +379,10 @@ export async function crear_inspeccion(
     );
   } catch (errorResultadosInsert) {
     console.error("[inspecciones][resultados_crear]", errorResultadosInsert);
-    return {
-      error:
-        "La inspección se creó, pero falló el guardado de resultados.",
-    };
+    return errorFormulario(
+      values,
+      "La inspección se creó, pero falló el guardado de resultados."
+    );
   }
 
   revalidatePath("/inspecciones");
@@ -346,18 +395,21 @@ export async function editar_inspeccion(
 ): Promise<EstadoFormularioInspeccion> {
   const usuario = await requiere_sesion();
 
-  const id_inspeccion = parseInt(limpiar(formData.get("id_inspeccion")), 10);
-  const id_lote = parseInt(limpiar(formData.get("id_lote")), 10);
-  const id_cliente = numeroOpcional(limpiar(formData.get("id_cliente")));
-  const observaciones = limpiar(formData.get("observaciones")) || null;
+  const values = extraerValores(formData);
+  const id_inspeccion = parseInt(values.id_inspeccion, 10);
+  const id_lote = parseInt(values.id_lote, 10);
+  const id_cliente = numeroOpcional(values.id_cliente);
+  const observaciones = values.observaciones || null;
 
   if (!id_inspeccion || !id_lote) {
-    return { error: "Inspección inválida." };
+    return errorFormulario(values, "Inspección inválida.");
   }
 
   const { error: errorResultados, resultados } = parsearResultados(formData);
   if (errorResultados) {
-    return { error: errorResultados };
+    return errorFormulario(values, errorResultados, {
+      resultados_json: "Corrige los resultados capturados.",
+    });
   }
 
   const supabase = await crearClienteServidor();
@@ -369,14 +421,14 @@ export async function editar_inspeccion(
     .maybeSingle();
 
   if (!inspeccionActual) {
-    return { error: "No se encontró la inspección seleccionada." };
+    return errorFormulario(values, "No se encontró la inspección seleccionada.");
   }
 
   if (inspeccionActual.status !== "borrador") {
-    return {
-      error:
-        "Solo se pueden editar inspecciones en borrador. Para corregir una inspección ya consolidada, crea un ajuste trazable.",
-    };
+    return errorFormulario(
+      values,
+      "Solo se pueden editar inspecciones en borrador. Para corregir una inspección ya consolidada, crea un ajuste trazable."
+    );
   }
 
   const { error } = await supabase
@@ -391,7 +443,7 @@ export async function editar_inspeccion(
 
   if (error) {
     console.error("[inspecciones][editar]", error);
-    return { error: "No fue posible actualizar la inspección." };
+    return errorFormulario(values, "No fue posible actualizar la inspección.");
   }
 
   try {
@@ -409,10 +461,10 @@ export async function editar_inspeccion(
     );
   } catch (errorResultadosInsert) {
     console.error("[inspecciones][resultados_editar]", errorResultadosInsert);
-    return {
-      error:
-        "La inspección se actualizó, pero falló la captura de resultados.",
-    };
+    return errorFormulario(
+      values,
+      "La inspección se actualizó, pero falló la captura de resultados."
+    );
   }
 
   revalidatePath("/inspecciones");
@@ -425,23 +477,28 @@ export async function crear_ajuste_inspeccion(
 ): Promise<EstadoFormularioInspeccion> {
   const usuario = await requiere_sesion();
 
-  const id_inspeccion_base = parseInt(limpiar(formData.get("id_inspeccion_base")), 10);
-  const id_lote = parseInt(limpiar(formData.get("id_lote")), 10);
-  const id_cliente = numeroOpcional(limpiar(formData.get("id_cliente")));
-  const motivo_ajuste = limpiar(formData.get("motivo_ajuste"));
-  const observaciones = limpiar(formData.get("observaciones")) || null;
+  const values = extraerValores(formData);
+  const id_inspeccion_base = parseInt(values.id_inspeccion_base, 10);
+  const id_lote = parseInt(values.id_lote, 10);
+  const id_cliente = numeroOpcional(values.id_cliente);
+  const motivo_ajuste = values.motivo_ajuste;
+  const observaciones = values.observaciones || null;
 
   if (!id_inspeccion_base || !id_lote) {
-    return { error: "Debes seleccionar una inspección base válida." };
+    return errorFormulario(values, "Debes seleccionar una inspección base válida.");
   }
 
   if (!motivo_ajuste) {
-    return { error: "Debes capturar el motivo del ajuste." };
+    return errorFormulario(values, "Debes capturar el motivo del ajuste.", {
+      motivo_ajuste: "Captura el motivo del ajuste.",
+    });
   }
 
   const { error: errorResultados, resultados } = parsearResultados(formData);
   if (errorResultados) {
-    return { error: errorResultados };
+    return errorFormulario(values, errorResultados, {
+      resultados_json: "Corrige los resultados capturados.",
+    });
   }
 
   const supabase = await crearClienteServidor();
@@ -453,11 +510,14 @@ export async function crear_ajuste_inspeccion(
     .maybeSingle();
 
   if (!inspeccionBase) {
-    return { error: "No se encontró la inspección base seleccionada." };
+    return errorFormulario(values, "No se encontró la inspección base seleccionada.");
   }
 
   if (inspeccionBase.id_lote !== id_lote) {
-    return { error: "El ajuste debe conservar el mismo lote de la inspección base." };
+    return errorFormulario(
+      values,
+      "El ajuste debe conservar el mismo lote de la inspección base."
+    );
   }
 
   let secuencia: string | null = null;
@@ -466,13 +526,14 @@ export async function crear_ajuste_inspeccion(
     secuencia = await siguienteSecuenciaLote(supabase, id_lote);
   } catch (errorSecuencia) {
     console.error("[inspecciones][ajuste][secuencia]", errorSecuencia);
-    return { error: "No fue posible calcular la secuencia del ajuste." };
+    return errorFormulario(values, "No fue posible calcular la secuencia del ajuste.");
   }
 
   if (!secuencia) {
-    return {
-      error: "El lote ya alcanzó la secuencia máxima de inspecciones (Z).",
-    };
+    return errorFormulario(
+      values,
+      "El lote ya alcanzó la secuencia máxima de inspecciones (Z)."
+    );
   }
 
   const { data: ajuste, error } = await supabase
@@ -495,7 +556,7 @@ export async function crear_ajuste_inspeccion(
 
   if (error || !ajuste) {
     console.error("[inspecciones][ajuste][crear]", error);
-    return { error: "No fue posible crear el ajuste." };
+    return errorFormulario(values, "No fue posible crear el ajuste.");
   }
 
   try {
@@ -529,9 +590,10 @@ export async function crear_ajuste_inspeccion(
     });
   } catch (errorResultadosInsert) {
     console.error("[inspecciones][ajuste][resultados]", errorResultadosInsert);
-    return {
-      error: "El ajuste se creó, pero falló el guardado de resultados.",
-    };
+    return errorFormulario(
+      values,
+      "El ajuste se creó, pero falló el guardado de resultados."
+    );
   }
 
   revalidatePath("/inspecciones");

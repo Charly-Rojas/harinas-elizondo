@@ -2,6 +2,11 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { crearClienteAdmin } from "@/lib/supabase/admin";
+import {
+  construirPayloadPdfCertificado,
+  generarPdfCertificado,
+  PDF_CERTIFICADO_VERSION,
+} from "@/lib/pdf-certificados";
 import { supabaseAdminConfigurado } from "@/lib/supabase/configuracion";
 import type { CertificadoConRelaciones } from "@/lib/tipos-dominio";
 
@@ -20,7 +25,7 @@ export async function obtenerCertificadoDetalleConCliente(
   const { data } = await supabase
     .from("certificados_calidad")
     .select(
-      "*, clientes(id_cliente, nombre), lotes_produccion(id_lote, numero_lote, fecha_produccion, fecha_caducidad, productos(*)), inspecciones(id_inspeccion, secuencia, es_ajuste, id_inspeccion_base), certificado_resultados(*)"
+      "*, clientes(id_cliente, nombre, domicilio_fiscal), lotes_produccion(id_lote, numero_lote, fecha_produccion, fecha_caducidad, productos(*)), inspecciones(id_inspeccion, secuencia, es_ajuste, id_inspeccion_base), certificado_resultados(*)"
     )
     .eq("id_certificado", idCertificado)
     .maybeSingle();
@@ -89,4 +94,47 @@ export async function descargarPdfCertificado(path: string) {
   }
 
   return new Uint8Array(await data.arrayBuffer());
+}
+
+export function requiereRegenerarPdf(certificado: Pick<
+  CertificadoConRelaciones,
+  "pdf_storage_path" | "pdf_version"
+>) {
+  return (
+    !certificado.pdf_storage_path ||
+    certificado.pdf_storage_path.startsWith("/") ||
+    (certificado.pdf_version ?? 1) < PDF_CERTIFICADO_VERSION
+  );
+}
+
+export async function generarYGuardarPdfCertificado(
+  certificado: CertificadoConRelaciones,
+  usuarioId?: string | null
+) {
+  const contenido = await generarPdfCertificado(
+    construirPayloadPdfCertificado(certificado)
+  );
+  const nombreArchivo =
+    certificado.pdf_nombre_archivo ||
+    `${certificado.folio || `certificado-${certificado.id_certificado}`}.pdf`;
+  const upload = await guardarPdfCertificado(nombreArchivo, contenido);
+
+  if (upload && supabaseAdminConfigurado()) {
+    const supabase = crearClienteAdmin();
+    await supabase
+      .from("certificados_calidad")
+      .update({
+        pdf_storage_path: upload.path,
+        pdf_nombre_archivo: nombreArchivo,
+        pdf_version: PDF_CERTIFICADO_VERSION,
+        ...(usuarioId ? { actualizado_por: usuarioId } : {}),
+      })
+      .eq("id_certificado", certificado.id_certificado);
+  }
+
+  return {
+    contenido,
+    pdfPath: upload?.path || certificado.pdf_storage_path || null,
+    pdfNombre: nombreArchivo,
+  };
 }

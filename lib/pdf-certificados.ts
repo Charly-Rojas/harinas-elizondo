@@ -14,15 +14,21 @@ type ResultadoPdf = {
   estado: string;
 };
 
+export const PDF_CERTIFICADO_VERSION = 2;
+
 export type PayloadPdfCertificado = {
   folio: string;
   cliente: string;
   lote: string;
   secuencia: string;
-  numeroOrdenCompra?: string | null;
+  numeroPedidoCliente?: string | null;
   numeroFactura?: string | null;
   fechaEnvio?: string | null;
+  fechaProduccion?: string | null;
   fechaCaducidad?: string | null;
+  domicilioFiscal?: string | null;
+  domicilioEntregaEtiqueta?: string | null;
+  domicilioEntrega?: string | null;
   cantidadSolicitada?: string | null;
   cantidadTotalEntrega?: string | null;
   observaciones?: string | null;
@@ -54,10 +60,17 @@ export function construirPayloadPdfCertificado(
     cliente: cliente?.nombre || "-",
     lote: lote?.numero_lote || "-",
     secuencia: inspeccion?.secuencia || "-",
-    numeroOrdenCompra: certificado.numero_orden_compra,
+    numeroPedidoCliente: certificado.numero_pedido_cliente,
     numeroFactura: certificado.numero_factura,
     fechaEnvio: certificado.fecha_envio,
+    fechaProduccion:
+      certificado.fecha_produccion || lote?.fecha_produccion || null,
     fechaCaducidad: certificado.fecha_caducidad || lote?.fecha_caducidad || null,
+    domicilioFiscal:
+      certificado.domicilio_fiscal_snapshot || cliente?.domicilio_fiscal || null,
+    domicilioEntregaEtiqueta:
+      certificado.domicilio_entrega_etiqueta_snapshot || null,
+    domicilioEntrega: certificado.domicilio_entrega_snapshot || null,
     cantidadSolicitada: formatearNumero(certificado.cantidad_solicitada),
     cantidadTotalEntrega: formatearNumero(certificado.cantidad_total_entrega),
     observaciones: certificado.observaciones,
@@ -214,9 +227,10 @@ export async function generarPdfCertificado(payload: PayloadPdfCertificado) {
     ["Cliente", payload.cliente],
     ["Lote", payload.lote],
     ["Inspección", payload.secuencia],
-    ["Orden de compra", payload.numeroOrdenCompra || "-"],
+    ["Pedido cliente", payload.numeroPedidoCliente || "-"],
     ["Factura", payload.numeroFactura || "-"],
     ["Fecha de envío", payload.fechaEnvio || "-"],
+    ["Fecha de producción", payload.fechaProduccion || "-"],
     ["Fecha de caducidad", payload.fechaCaducidad || "-"],
     ["Cantidad solicitada", payload.cantidadSolicitada || "-"],
     ["Cantidad total entrega", payload.cantidadTotalEntrega || "-"],
@@ -236,6 +250,58 @@ export async function generarPdfCertificado(payload: PayloadPdfCertificado) {
       dibujarTextoAjustado(page, font, valor, x, y - 14, 160, 10);
     });
     y -= 42;
+  }
+
+  y -= 8;
+  page.drawText("Domicilios", {
+    x: 36,
+    y,
+    size: 12,
+    font: fontBold,
+    color: COLOR_TEXTO,
+  });
+  y -= 18;
+
+  page.drawText("Domicilio fiscal", {
+    x: 36,
+    y,
+    size: 9,
+    font: fontBold,
+    color: COLOR_MUTED,
+  });
+  y = dibujarTextoAjustado(
+    page,
+    font,
+    payload.domicilioFiscal || "-",
+    36,
+    y - 14,
+    520,
+    10
+  );
+
+  if (payload.domicilioEntrega) {
+    y -= 24;
+    page.drawText(
+      payload.domicilioEntregaEtiqueta
+        ? `Domicilio de entrega (${payload.domicilioEntregaEtiqueta})`
+        : "Domicilio de entrega",
+      {
+        x: 36,
+        y,
+        size: 9,
+        font: fontBold,
+        color: COLOR_MUTED,
+      }
+    );
+    y = dibujarTextoAjustado(
+      page,
+      font,
+      payload.domicilioEntrega,
+      36,
+      y - 14,
+      520,
+      10
+    );
   }
 
   y -= 8;

@@ -2,13 +2,21 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import {
+  direccionCompleta,
+  formatearDireccion,
+  normalizarDireccionEntregaEntrada,
+  normalizarDireccionEntrada,
+  parsearDireccionLegacy,
+  type DireccionEntregaCaptura,
+  type DireccionEstructurada,
+} from "@/lib/direcciones";
+import type { FormState } from "@/lib/form-state";
 import { requiere_sesion } from "@/lib/autorizacion";
 import { crearClienteServidor } from "@/lib/supabase/servidor";
+import type { ClienteFormValues } from "@/lib/tipos-clientes";
 
-export type EstadoFormularioCliente = {
-  error?: string;
-  exito?: string;
-};
+export type EstadoFormularioCliente = FormState<ClienteFormValues, string>;
 
 type ParametroClienteFormulario = {
   clave_parametro: string;
@@ -39,163 +47,200 @@ function es_status_cliente_valido(
 type DomicilioEntregaFormulario = {
   etiqueta: string;
   direccion: string;
+  calle: string;
+  numero_exterior: string;
+  numero_interior: string;
+  colonia: string;
+  ciudad: string;
+  estado: string;
+  codigo_postal: string;
+  pais: string;
 };
 
-function parsearDomiciliosEntrega(formData: FormData) {
-  const bruto = limpiar(formData.get("domicilios_json"));
+function construirEstadoError(
+  values: ClienteFormValues,
+  formError: string,
+  fieldErrors?: EstadoFormularioCliente["fieldErrors"]
+): EstadoFormularioCliente {
+  return {
+    formError,
+    fieldErrors,
+    values,
+  };
+}
 
-  if (!bruto) {
+function parsearJson<T>(valor: string, fallback: T): T {
+  if (!valor) return fallback;
+
+  try {
+    return JSON.parse(valor) as T;
+  } catch {
+    return fallback;
+  }
+}
+
+function construirValoresCliente(formData: FormData): ClienteFormValues {
+  const parametrosJson = parsearJson<
+    ClienteFormValues["parametros_json"]
+  >(limpiar(formData.get("parametros_json")), []);
+  const domicilioFiscalJson = parsearJson<Partial<DireccionEstructurada>>(
+    limpiar(formData.get("domicilio_fiscal_json")),
+    {}
+  );
+  const domiciliosJson = parsearJson<Partial<DireccionEntregaCaptura>[]>(
+    limpiar(formData.get("domicilios_json")),
+    []
+  );
+
+  const domicilioFiscal =
+    Object.keys(domicilioFiscalJson).length > 0
+      ? normalizarDireccionEntrada(domicilioFiscalJson)
+      : parsearDireccionLegacy(limpiar(formData.get("domicilio_fiscal")));
+
+  if (!domicilioFiscal.calle) {
+    domicilioFiscal.calle = limpiar(formData.get("dom_calle"));
+    domicilioFiscal.numero_exterior = limpiar(formData.get("dom_numero_exterior"));
+    domicilioFiscal.numero_interior = limpiar(formData.get("dom_numero_interior"));
+    domicilioFiscal.colonia = limpiar(formData.get("dom_colonia"));
+    domicilioFiscal.ciudad = limpiar(formData.get("dom_ciudad"));
+    domicilioFiscal.estado = limpiar(formData.get("dom_estado"));
+    domicilioFiscal.codigo_postal = limpiar(formData.get("dom_codigo_postal"));
+    domicilioFiscal.pais = limpiar(formData.get("dom_pais")) || "Mexico";
+  }
+
+  return {
+    id_cliente: limpiar(formData.get("id_cliente")),
+    nombre: limpiar(formData.get("nombre")),
+    rfc: limpiar(formData.get("rfc")).toUpperCase(),
+    contacto_certificado: limpiar(formData.get("contacto_certificado")),
+    correo_contacto_cliente: limpiar(formData.get("correo_contacto_cliente")),
+    correo_almacenista: limpiar(formData.get("correo_almacenista")),
+    correo_gte_calidad: limpiar(formData.get("correo_gte_calidad")),
+    solicita_certificado: formData.get("solicita_certificado") === "on",
+    usa_especificaciones_cliente:
+      formData.get("usa_especificaciones_cliente") === "on",
+    domicilio_fiscal: domicilioFiscal,
+    domicilios: domiciliosJson.map((fila) =>
+      normalizarDireccionEntregaEntrada(fila)
+    ),
+    parametros_json: parametrosJson,
+  };
+}
+
+function parsearDomiciliosEntrega(values: ClienteFormValues) {
+  if (!values.domicilios.length) {
     return {
       error: null,
       domicilios: [] as DomicilioEntregaFormulario[],
     };
   }
 
-  try {
-    const datos = JSON.parse(bruto);
-
-    if (!Array.isArray(datos)) {
+  const domicilios = values.domicilios
+    .map((fila) => {
+      const direccion = normalizarDireccionEntregaEntrada(fila);
       return {
-        error: "El formato de domicilios de entrega es inválido.",
+        ...direccion,
+        direccion: formatearDireccion(direccion),
+      };
+    })
+    .filter((fila) => fila.etiqueta || fila.direccion);
+
+  for (const domicilio of domicilios) {
+    if (!domicilio.etiqueta || !direccionCompleta(domicilio)) {
+      return {
+        error:
+          "Cada domicilio de entrega debe incluir etiqueta, direccion completa y codigo postal.",
         domicilios: [] as DomicilioEntregaFormulario[],
       };
     }
-
-    const domicilios = datos
-      .map((fila) => ({
-        etiqueta: limpiar(fila?.etiqueta),
-        direccion: limpiar(fila?.direccion),
-      }))
-      .filter((fila) => fila.etiqueta || fila.direccion);
-
-    for (const domicilio of domicilios) {
-      if (!domicilio.etiqueta || !domicilio.direccion) {
-        return {
-          error:
-            "Cada domicilio de entrega debe incluir etiqueta y dirección.",
-          domicilios: [] as DomicilioEntregaFormulario[],
-        };
-      }
-    }
-
-    return { error: null, domicilios };
-  } catch {
-    return {
-      error: "No fue posible leer los domicilios de entrega.",
-      domicilios: [] as DomicilioEntregaFormulario[],
-    };
   }
+
+  return { error: null, domicilios };
 }
 
-function construirDomicilioFiscal(formData: FormData) {
-  const calle = limpiar(formData.get("dom_calle"));
-  const numero_exterior = limpiar(formData.get("dom_numero_exterior"));
-  const numero_interior = limpiar(formData.get("dom_numero_interior"));
-  const colonia = limpiar(formData.get("dom_colonia"));
-  const ciudad = limpiar(formData.get("dom_ciudad"));
-  const estado = limpiar(formData.get("dom_estado"));
-  const codigo_postal = limpiar(formData.get("dom_codigo_postal"));
-  const pais = limpiar(formData.get("dom_pais")) || "México";
+function construirDomicilioFiscal(values: ClienteFormValues) {
+  const direccion = normalizarDireccionEntrada(values.domicilio_fiscal);
 
-  if (!calle || !colonia || !ciudad || !estado || !codigo_postal) {
-    return { error: "Completa los campos del domicilio fiscal.", valor: "" };
+  if (!direccionCompleta(direccion)) {
+    return {
+      error: "Completa los campos del domicilio fiscal.",
+      valor: "",
+      direccion,
+    };
   }
 
-  const partes: string[] = [];
-  partes.push(numero_exterior ? `${calle} #${numero_exterior}` : calle);
-  if (numero_interior) partes.push(`Int #${numero_interior}`);
-  partes.push(`Col. ${colonia}`);
-  partes.push(ciudad);
-  partes.push(estado);
-  partes.push(codigo_postal);
-  partes.push(pais);
-
-  return { error: null, valor: partes.join(", ") };
+  return {
+    error: null,
+    valor: formatearDireccion(direccion),
+    direccion,
+  };
 }
 
 function parsearParametrosCliente(
-  formData: FormData,
+  values: ClienteFormValues,
   documentoEspecificaciones: string | null
 ) {
-  const bruto = limpiar(formData.get("parametros_json"));
-
-  if (!bruto) {
+  if (!values.parametros_json.length) {
     return {
       error: null,
       parametros: [] as ParametroClienteFormulario[],
     };
   }
 
-  try {
-    const datos = JSON.parse(bruto);
+  const parametros = values.parametros_json
+    .map((fila) => {
+      const clave_parametro = limpiar(fila?.clave_parametro).toUpperCase();
+      const nombre = limpiar(fila?.nombre);
+      const unidad_medida = limpiar(fila?.unidad_medida) || null;
+      const lim_min = numeroOpcional(limpiar(fila?.lim_min));
+      const lim_max = numeroOpcional(limpiar(fila?.lim_max));
 
-    if (!Array.isArray(datos)) {
       return {
-        error: "El formato de especificaciones del cliente es inválido.",
+        clave_parametro,
+        nombre,
+        unidad_medida,
+        lim_min,
+        lim_max,
+        origen_limites: "cliente" as const,
+        documento_referencia: documentoEspecificaciones,
+      };
+    })
+    .filter((fila) => {
+      return (
+        fila.clave_parametro ||
+        fila.nombre ||
+        fila.unidad_medida ||
+        fila.lim_min !== null ||
+        fila.lim_max !== null
+      );
+    });
+
+  for (const parametro of parametros) {
+    if (!parametro.clave_parametro || !parametro.nombre) {
+      return {
+        error:
+          "Cada especificación del cliente debe incluir clave y nombre del parámetro.",
         parametros: [] as ParametroClienteFormulario[],
       };
     }
 
-    const parametros = datos
-      .map((fila) => {
-        const clave_parametro = limpiar(fila?.clave_parametro).toUpperCase();
-        const nombre = limpiar(fila?.nombre);
-        const unidad_medida = limpiar(fila?.unidad_medida) || null;
-        const lim_min = numeroOpcional(limpiar(fila?.lim_min));
-        const lim_max = numeroOpcional(limpiar(fila?.lim_max));
-
-        return {
-          clave_parametro,
-          nombre,
-          unidad_medida,
-          lim_min,
-          lim_max,
-          origen_limites: "cliente" as const,
-          documento_referencia: documentoEspecificaciones,
-        };
-      })
-      .filter((fila) => {
-        return (
-          fila.clave_parametro ||
-          fila.nombre ||
-          fila.unidad_medida ||
-          fila.lim_min !== null ||
-          fila.lim_max !== null
-        );
-      });
-
-    for (const parametro of parametros) {
-      if (!parametro.clave_parametro || !parametro.nombre) {
-        return {
-          error:
-            "Cada especificación del cliente debe incluir clave y nombre del parámetro.",
-          parametros: [] as ParametroClienteFormulario[],
-        };
-      }
-
-      if (
-        parametro.lim_min !== null &&
-        parametro.lim_max !== null &&
-        parametro.lim_min > parametro.lim_max
-      ) {
-        return {
-          error:
-            "En las especificaciones del cliente el límite mínimo no puede ser mayor que el máximo.",
-          parametros: [] as ParametroClienteFormulario[],
-        };
-      }
+    if (
+      parametro.lim_min !== null &&
+      parametro.lim_max !== null &&
+      parametro.lim_min > parametro.lim_max
+    ) {
+      return {
+        error:
+          "En las especificaciones del cliente el límite mínimo no puede ser mayor que el máximo.",
+        parametros: [] as ParametroClienteFormulario[],
+      };
     }
-
-    return {
-      error: null,
-      parametros,
-    };
-  } catch {
-    return {
-      error: "No fue posible leer las especificaciones del cliente.",
-      parametros: [] as ParametroClienteFormulario[],
-    };
   }
+
+  return {
+    error: null,
+    parametros,
+  };
 }
 
 async function sincronizarDireccionesEntrega(
@@ -214,6 +259,14 @@ async function sincronizarDireccionesEntrega(
       id_cliente: idCliente,
       etiqueta: domicilio.etiqueta,
       direccion: domicilio.direccion,
+      calle: domicilio.calle,
+      numero_exterior: domicilio.numero_exterior,
+      numero_interior: domicilio.numero_interior,
+      colonia: domicilio.colonia,
+      ciudad: domicilio.ciudad,
+      estado: domicilio.estado,
+      codigo_postal: domicilio.codigo_postal,
+      pais: domicilio.pais,
       activo: true,
     }))
   );
@@ -263,62 +316,82 @@ export async function crear_cliente(
   formData: FormData
 ): Promise<EstadoFormularioCliente> {
   const usuario = await requiere_sesion();
-
-  const id_cliente = parseInt(limpiar(formData.get("id_cliente")), 10);
-  const nombre = limpiar(formData.get("nombre"));
-  const rfc = limpiar(formData.get("rfc")).toUpperCase();
-  const contacto_certificado = limpiar(formData.get("contacto_certificado")) || null;
-  const correo_contacto_cliente =
-    limpiar(formData.get("correo_contacto_cliente")) || null;
-  const correo_almacenista = limpiar(formData.get("correo_almacenista")) || null;
-  const correo_gte_calidad = limpiar(formData.get("correo_gte_calidad")) || null;
-  const solicita_certificado = formData.get("solicita_certificado") === "on";
-  const usa_especificaciones_cliente =
-    formData.get("usa_especificaciones_cliente") === "on";
+  const values = construirValoresCliente(formData);
+  const id_cliente = parseInt(values.id_cliente, 10);
+  const nombre = values.nombre;
+  const rfc = values.rfc;
+  const contacto_certificado = values.contacto_certificado || null;
+  const correo_contacto_cliente = values.correo_contacto_cliente || null;
+  const correo_almacenista = values.correo_almacenista || null;
+  const correo_gte_calidad = values.correo_gte_calidad || null;
+  const solicita_certificado = values.solicita_certificado;
+  const usa_especificaciones_cliente = values.usa_especificaciones_cliente;
 
   if (!id_cliente || id_cliente < 100000 || id_cliente > 999999) {
-    return { error: "El ID SAP debe ser un número de 6 dígitos." };
+    return construirEstadoError(values, "El ID SAP debe ser un número de 6 dígitos.", {
+      id_cliente: "Captura un ID SAP valido de 6 digitos.",
+    });
   }
-  if (!nombre) return { error: "El nombre es obligatorio." };
-  if (!rfc) return { error: "El RFC es obligatorio." };
+  if (!nombre) {
+    return construirEstadoError(values, "El nombre es obligatorio.", {
+      nombre: "Captura el nombre o razon social.",
+    });
+  }
+  if (!rfc) {
+    return construirEstadoError(values, "El RFC es obligatorio.", {
+      rfc: "Captura el RFC del cliente.",
+    });
+  }
 
   const rfcRegex = /^[A-ZÑ&]{3,4}\d{6}[A-Z0-9]{3}$/;
   if (!rfcRegex.test(rfc)) {
-    return { error: "El formato del RFC no es válido." };
+    return construirEstadoError(values, "El formato del RFC no es válido.", {
+      rfc: "El RFC no cumple el formato esperado.",
+    });
   }
 
   const {
     error: errorDomicilio,
     valor: domicilio_fiscal,
-  } = construirDomicilioFiscal(formData);
+    direccion: domicilioFiscalEstructurado,
+  } = construirDomicilioFiscal(values);
 
   if (errorDomicilio) {
-    return { error: errorDomicilio };
+    return construirEstadoError(values, errorDomicilio, {
+      domicilio_fiscal: "Completa el domicilio fiscal.",
+    });
   }
 
   const {
     error: errorDomiciliosEntrega,
     domicilios: domiciliosEntrega,
-  } = parsearDomiciliosEntrega(formData);
+  } = parsearDomiciliosEntrega(values);
 
   if (errorDomiciliosEntrega) {
-    return { error: errorDomiciliosEntrega };
+    return construirEstadoError(values, errorDomiciliosEntrega, {
+      domicilios: "Corrige los domicilios de entrega.",
+    });
   }
 
   const {
     error: errorParametros,
     parametros,
-  } = parsearParametrosCliente(formData, null);
+  } = parsearParametrosCliente(values, null);
 
   if (errorParametros) {
-    return { error: errorParametros };
+    return construirEstadoError(values, errorParametros, {
+      parametros_json: "Corrige las especificaciones del cliente.",
+    });
   }
 
   if (usa_especificaciones_cliente && parametros.length === 0) {
-    return {
-      error:
-        "Marca al menos una especificación del cliente o desactiva esa opción.",
-    };
+    return construirEstadoError(
+      values,
+      "Marca al menos una especificación del cliente o desactiva esa opción.",
+      {
+        parametros_json: "Captura al menos una especificacion.",
+      }
+    );
   }
 
   const supabase = await crearClienteServidor();
@@ -330,7 +403,9 @@ export async function crear_cliente(
     .maybeSingle();
 
   if (existeId) {
-    return { error: "Ya existe un cliente con ese ID SAP." };
+    return construirEstadoError(values, "Ya existe un cliente con ese ID SAP.", {
+      id_cliente: "Ese ID SAP ya esta registrado.",
+    });
   }
 
   const { data: existeRfc } = await supabase
@@ -340,7 +415,9 @@ export async function crear_cliente(
     .maybeSingle();
 
   if (existeRfc) {
-    return { error: "Ya existe un cliente con ese RFC." };
+    return construirEstadoError(values, "Ya existe un cliente con ese RFC.", {
+      rfc: "Ese RFC ya esta registrado.",
+    });
   }
 
   const { error } = await supabase.from("clientes").insert({
@@ -348,6 +425,15 @@ export async function crear_cliente(
     nombre,
     rfc,
     domicilio_fiscal,
+    domicilio_entrega: domiciliosEntrega[0]?.direccion ?? null,
+    dom_fiscal_calle: domicilioFiscalEstructurado.calle,
+    dom_fiscal_numero_exterior: domicilioFiscalEstructurado.numero_exterior || null,
+    dom_fiscal_numero_interior: domicilioFiscalEstructurado.numero_interior || null,
+    dom_fiscal_colonia: domicilioFiscalEstructurado.colonia,
+    dom_fiscal_ciudad: domicilioFiscalEstructurado.ciudad,
+    dom_fiscal_estado: domicilioFiscalEstructurado.estado,
+    dom_fiscal_codigo_postal: domicilioFiscalEstructurado.codigo_postal,
+    dom_fiscal_pais: domicilioFiscalEstructurado.pais,
     contacto_certificado,
     correo_contacto_cliente,
     correo_almacenista,
@@ -361,7 +447,7 @@ export async function crear_cliente(
 
   if (error) {
     console.error("[clientes][crear]", error);
-    return { error: "No fue posible registrar al cliente." };
+    return construirEstadoError(values, "No fue posible registrar al cliente.");
   }
 
   try {
@@ -373,10 +459,10 @@ export async function crear_cliente(
     );
   } catch (errorRelacion) {
     console.error("[clientes][crear_relaciones]", errorRelacion);
-    return {
-      error:
-        "El cliente se registró, pero falló el guardado de dirección o especificaciones.",
-    };
+    return construirEstadoError(
+      values,
+      "El cliente se registro, pero fallo el guardado de direccion o especificaciones."
+    );
   }
 
   revalidatePath("/clientes");
@@ -390,58 +476,77 @@ export async function editar_cliente(
   formData: FormData
 ): Promise<EstadoFormularioCliente> {
   const usuario = await requiere_sesion();
+  const values = construirValoresCliente(formData);
 
-  const id_cliente = parseInt(limpiar(formData.get("id_cliente")), 10);
-  const nombre = limpiar(formData.get("nombre"));
-  const rfc = limpiar(formData.get("rfc")).toUpperCase();
-  const contacto_certificado = limpiar(formData.get("contacto_certificado")) || null;
-  const correo_contacto_cliente =
-    limpiar(formData.get("correo_contacto_cliente")) || null;
-  const correo_almacenista = limpiar(formData.get("correo_almacenista")) || null;
-  const correo_gte_calidad = limpiar(formData.get("correo_gte_calidad")) || null;
-  const solicita_certificado = formData.get("solicita_certificado") === "on";
-  const usa_especificaciones_cliente =
-    formData.get("usa_especificaciones_cliente") === "on";
+  const id_cliente = parseInt(values.id_cliente, 10);
+  const nombre = values.nombre;
+  const rfc = values.rfc;
+  const contacto_certificado = values.contacto_certificado || null;
+  const correo_contacto_cliente = values.correo_contacto_cliente || null;
+  const correo_almacenista = values.correo_almacenista || null;
+  const correo_gte_calidad = values.correo_gte_calidad || null;
+  const solicita_certificado = values.solicita_certificado;
+  const usa_especificaciones_cliente = values.usa_especificaciones_cliente;
   const rfcRegex = /^[A-ZÑ&]{3,4}\d{6}[A-Z0-9]{3}$/;
 
-  if (!nombre) return { error: "El nombre es obligatorio." };
-  if (!rfc) return { error: "El RFC es obligatorio." };
+  if (!nombre) {
+    return construirEstadoError(values, "El nombre es obligatorio.", {
+      nombre: "Captura el nombre o razon social.",
+    });
+  }
+  if (!rfc) {
+    return construirEstadoError(values, "El RFC es obligatorio.", {
+      rfc: "Captura el RFC del cliente.",
+    });
+  }
   if (!rfcRegex.test(rfc)) {
-    return { error: "El formato del RFC no es válido." };
+    return construirEstadoError(values, "El formato del RFC no es válido.", {
+      rfc: "El RFC no cumple el formato esperado.",
+    });
   }
 
   const {
     error: errorDomicilio,
     valor: domicilio_fiscal,
-  } = construirDomicilioFiscal(formData);
+    direccion: domicilioFiscalEstructurado,
+  } = construirDomicilioFiscal(values);
 
   if (errorDomicilio) {
-    return { error: errorDomicilio };
+    return construirEstadoError(values, errorDomicilio, {
+      domicilio_fiscal: "Completa el domicilio fiscal.",
+    });
   }
 
   const {
     error: errorDomiciliosEntrega,
     domicilios: domiciliosEntrega,
-  } = parsearDomiciliosEntrega(formData);
+  } = parsearDomiciliosEntrega(values);
 
   if (errorDomiciliosEntrega) {
-    return { error: errorDomiciliosEntrega };
+    return construirEstadoError(values, errorDomiciliosEntrega, {
+      domicilios: "Corrige los domicilios de entrega.",
+    });
   }
 
   const {
     error: errorParametros,
     parametros,
-  } = parsearParametrosCliente(formData, null);
+  } = parsearParametrosCliente(values, null);
 
   if (errorParametros) {
-    return { error: errorParametros };
+    return construirEstadoError(values, errorParametros, {
+      parametros_json: "Corrige las especificaciones del cliente.",
+    });
   }
 
   if (usa_especificaciones_cliente && parametros.length === 0) {
-    return {
-      error:
-        "Marca al menos una especificación del cliente o desactiva esa opción.",
-    };
+    return construirEstadoError(
+      values,
+      "Marca al menos una especificación del cliente o desactiva esa opción.",
+      {
+        parametros_json: "Captura al menos una especificacion.",
+      }
+    );
   }
 
   const supabase = await crearClienteServidor();
@@ -454,7 +559,9 @@ export async function editar_cliente(
     .maybeSingle();
 
   if (existeRfc) {
-    return { error: "Ese RFC ya pertenece a otro cliente." };
+    return construirEstadoError(values, "Ese RFC ya pertenece a otro cliente.", {
+      rfc: "Ese RFC ya esta registrado.",
+    });
   }
 
   const { error } = await supabase
@@ -463,6 +570,15 @@ export async function editar_cliente(
       nombre,
       rfc,
       domicilio_fiscal,
+      domicilio_entrega: domiciliosEntrega[0]?.direccion ?? null,
+      dom_fiscal_calle: domicilioFiscalEstructurado.calle,
+      dom_fiscal_numero_exterior: domicilioFiscalEstructurado.numero_exterior || null,
+      dom_fiscal_numero_interior: domicilioFiscalEstructurado.numero_interior || null,
+      dom_fiscal_colonia: domicilioFiscalEstructurado.colonia,
+      dom_fiscal_ciudad: domicilioFiscalEstructurado.ciudad,
+      dom_fiscal_estado: domicilioFiscalEstructurado.estado,
+      dom_fiscal_codigo_postal: domicilioFiscalEstructurado.codigo_postal,
+      dom_fiscal_pais: domicilioFiscalEstructurado.pais,
       contacto_certificado,
       correo_contacto_cliente,
       correo_almacenista,
@@ -475,7 +591,7 @@ export async function editar_cliente(
 
   if (error) {
     console.error("[clientes][editar]", error);
-    return { error: "No fue posible actualizar al cliente." };
+    return construirEstadoError(values, "No fue posible actualizar al cliente.");
   }
 
   try {
@@ -487,10 +603,10 @@ export async function editar_cliente(
     );
   } catch (errorRelacion) {
     console.error("[clientes][editar_relaciones]", errorRelacion);
-    return {
-      error:
-        "Los datos principales se actualizaron, pero falló la dirección o las especificaciones.",
-    };
+    return construirEstadoError(
+      values,
+      "Los datos principales se actualizaron, pero fallo la direccion o las especificaciones."
+    );
   }
 
   revalidatePath("/clientes");

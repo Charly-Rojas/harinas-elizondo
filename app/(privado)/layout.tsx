@@ -3,8 +3,9 @@ import { cerrar_sesion } from "@/app/acciones/autenticacion";
 import { BarraLateral } from "@/componentes/panel/barra-lateral";
 import { EncabezadoPanel } from "@/componentes/panel/encabezado-panel";
 import { AvisoConfiguracionSupabase } from "@/componentes/supabase/aviso-configuracion-supabase";
-import { requiere_sesion } from "@/lib/autorizacion";
+import { requiere_sesion, usuario_activo } from "@/lib/autorizacion";
 import { supabasePublicoConfigurado } from "@/lib/supabase/configuracion";
+import { obtenerTextoRol, obtenerTextoStatusUsuario } from "@/lib/usuarios";
 
 export default async function LayoutPrivado({
   children,
@@ -21,19 +22,18 @@ export default async function LayoutPrivado({
 
   const usuarioActual = await requiere_sesion();
 
-  if (!usuarioActual.perfil.aprobado) {
+  if (!usuario_activo(usuarioActual.perfil)) {
     return (
       <main className="flex min-h-screen items-center justify-center p-6">
         <section className="superficie-panel w-full max-w-xl rounded-[32px] p-8 text-center">
           <Badge color="indigo" radius="full" size="2" variant="soft">
-            Acceso pendiente
+            Acceso restringido
           </Badge>
           <h1 className="mt-5 text-3xl font-semibold tracking-tight text-slate-900">
-            Tu cuenta todavía no ha sido aprobada
+            Tu cuenta no tiene acceso activo al panel
           </h1>
           <Text as="p" className="mt-4 block text-base leading-7 text-slate-600">
-            Un administrador debe validar tu registro antes de permitirte entrar
-            al panel.
+            Un administrador debe activar o reactivar tu cuenta antes de permitirte entrar al panel.
           </Text>
           <div className="mt-8 rounded-[24px] border border-slate-200 bg-white/70 p-5 text-left">
             <p className="text-sm font-medium text-slate-500">Correo</p>
@@ -42,7 +42,11 @@ export default async function LayoutPrivado({
             </p>
             <p className="mt-4 text-sm font-medium text-slate-500">Rol inicial</p>
             <p className="mt-1 text-base font-semibold text-slate-900">
-              {usuarioActual.perfil.rol}
+              {obtenerTextoRol(usuarioActual.perfil.rol)}
+            </p>
+            <p className="mt-4 text-sm font-medium text-slate-500">Estado</p>
+            <p className="mt-1 text-base font-semibold text-slate-900">
+              {obtenerTextoStatusUsuario(usuarioActual.perfil.status)}
             </p>
           </div>
           <form action={cerrar_sesion} className="mt-8">

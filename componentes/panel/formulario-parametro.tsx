@@ -7,6 +7,11 @@ import {
   editar_parametro,
   type EstadoFormularioParametro,
 } from "@/app/(privado)/parametros/acciones";
+import {
+  obtenerErrorCampo,
+  obtenerValor,
+  tieneErrorCampo,
+} from "@/lib/form-state";
 import type { ParametroCalidad } from "@/lib/tipos-dominio";
 
 const estadoInicial: EstadoFormularioParametro = {};
@@ -39,9 +44,9 @@ export function FormularioParametro({
         </Badge>
       </div>
 
-      {estado.error ? (
+      {estado.formError ? (
         <div className="mt-5 rounded-[22px] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {estado.error}
+          {estado.formError}
         </div>
       ) : null}
 
@@ -60,14 +65,24 @@ export function FormularioParametro({
               Clave
             </span>
             <input
+              aria-invalid={tieneErrorCampo(estado.fieldErrors, "clave")}
               className="campo-formulario"
-              defaultValue={parametro?.clave ?? ""}
+              defaultValue={obtenerValor(
+                estado.values,
+                "clave",
+                parametro?.clave ?? ""
+              )}
               name="clave"
               placeholder="ALV_W"
               required
               style={{ textTransform: "uppercase" }}
               type="text"
             />
+            {obtenerErrorCampo(estado.fieldErrors, "clave") ? (
+              <span className="mt-2 block text-xs text-red-600">
+                {obtenerErrorCampo(estado.fieldErrors, "clave")}
+              </span>
+            ) : null}
           </label>
 
           <label className="block">
@@ -75,13 +90,23 @@ export function FormularioParametro({
               Nombre
             </span>
             <input
+              aria-invalid={tieneErrorCampo(estado.fieldErrors, "nombre")}
               className="campo-formulario"
-              defaultValue={parametro?.nombre ?? ""}
+              defaultValue={obtenerValor(
+                estado.values,
+                "nombre",
+                parametro?.nombre ?? ""
+              )}
               name="nombre"
               placeholder="Fuerza panadera"
               required
               type="text"
             />
+            {obtenerErrorCampo(estado.fieldErrors, "nombre") ? (
+              <span className="mt-2 block text-xs text-red-600">
+                {obtenerErrorCampo(estado.fieldErrors, "nombre")}
+              </span>
+            ) : null}
           </label>
 
           <label className="block">
@@ -90,10 +115,52 @@ export function FormularioParametro({
             </span>
             <input
               className="campo-formulario"
-              defaultValue={parametro?.unidad_medida ?? ""}
+              defaultValue={obtenerValor(
+                estado.values,
+                "unidad_medida",
+                parametro?.unidad_medida ?? ""
+              )}
               name="unidad_medida"
               placeholder="W"
               type="text"
+            />
+          </label>
+
+          <label className="block">
+            <span className="mb-2 block text-sm font-medium text-slate-600">
+              Límite mínimo global
+            </span>
+            <input
+              aria-invalid={tieneErrorCampo(estado.fieldErrors, "lim_min_global")}
+              className="campo-formulario"
+              defaultValue={obtenerValor(
+                estado.values,
+                "lim_min_global",
+                parametro?.lim_min_global?.toString() ?? ""
+              )}
+              name="lim_min_global"
+              placeholder="0.0000"
+              step="0.0001"
+              type="number"
+            />
+          </label>
+
+          <label className="block">
+            <span className="mb-2 block text-sm font-medium text-slate-600">
+              Límite máximo global
+            </span>
+            <input
+              aria-invalid={tieneErrorCampo(estado.fieldErrors, "lim_max_global")}
+              className="campo-formulario"
+              defaultValue={obtenerValor(
+                estado.values,
+                "lim_max_global",
+                parametro?.lim_max_global?.toString() ?? ""
+              )}
+              name="lim_max_global"
+              placeholder="0.0000"
+              step="0.0001"
+              type="number"
             />
           </label>
         </div>
@@ -104,12 +171,18 @@ export function FormularioParametro({
               Equipo de origen
             </span>
             <select
+              aria-invalid={tieneErrorCampo(estado.fieldErrors, "equipo_origen")}
               className="campo-formulario"
-              defaultValue={parametro?.equipo_origen ?? "alveografo"}
+              defaultValue={obtenerValor(
+                estado.values,
+                "equipo_origen",
+                parametro?.equipo_origen ?? "otro"
+              )}
               name="equipo_origen"
             >
               <option value="alveografo">Alveógrafo</option>
               <option value="farinografo">Farinógrafo</option>
+              <option value="otro">Otro</option>
             </select>
           </label>
 
@@ -119,39 +192,13 @@ export function FormularioParametro({
             </span>
             <textarea
               className="campo-formulario min-h-28 resize-y"
-              defaultValue={parametro?.descripcion ?? ""}
+              defaultValue={obtenerValor(
+                estado.values,
+                "descripcion",
+                parametro?.descripcion ?? ""
+              )}
               name="descripcion"
               placeholder="Contexto operativo del parámetro y cómo se interpreta."
-            />
-          </label>
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-2">
-          <label className="block">
-            <span className="mb-2 block text-sm font-medium text-slate-600">
-              Límite inferior global
-            </span>
-            <input
-              className="campo-formulario"
-              defaultValue={parametro?.lim_min_global ?? ""}
-              name="lim_min_global"
-              placeholder="0.0000"
-              step="0.0001"
-              type="number"
-            />
-          </label>
-
-          <label className="block">
-            <span className="mb-2 block text-sm font-medium text-slate-600">
-              Límite superior global
-            </span>
-            <input
-              className="campo-formulario"
-              defaultValue={parametro?.lim_max_global ?? ""}
-              name="lim_max_global"
-              placeholder="100.0000"
-              step="0.0001"
-              type="number"
             />
           </label>
         </div>

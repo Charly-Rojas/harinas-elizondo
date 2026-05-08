@@ -7,6 +7,11 @@ import {
   editar_lote,
   type EstadoFormularioLote,
 } from "@/app/(privado)/lotes/acciones";
+import {
+  obtenerErrorCampo,
+  obtenerValor,
+  tieneErrorCampo,
+} from "@/lib/form-state";
 import type { LoteConRelaciones, ProductoLigero } from "@/lib/tipos-dominio";
 
 const estadoInicial: EstadoFormularioLote = {};
@@ -41,9 +46,9 @@ export function FormularioLote({
         </Badge>
       </div>
 
-      {estado.error ? (
+      {estado.formError ? (
         <div className="mt-5 rounded-[22px] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {estado.error}
+          {estado.formError}
         </div>
       ) : null}
 
@@ -58,14 +63,24 @@ export function FormularioLote({
               Número de lote
             </span>
             <input
+              aria-invalid={tieneErrorCampo(estado.fieldErrors, "numero_lote")}
               className="campo-formulario"
-              defaultValue={lote?.numero_lote ?? ""}
+              defaultValue={obtenerValor(
+                estado.values,
+                "numero_lote",
+                lote?.numero_lote ?? ""
+              )}
               name="numero_lote"
               placeholder="L-2026-0001"
               required
               style={{ textTransform: "uppercase" }}
               type="text"
             />
+            {obtenerErrorCampo(estado.fieldErrors, "numero_lote") ? (
+              <span className="mt-2 block text-xs text-red-600">
+                {obtenerErrorCampo(estado.fieldErrors, "numero_lote")}
+              </span>
+            ) : null}
           </label>
 
           <label className="block">
@@ -74,7 +89,11 @@ export function FormularioLote({
             </span>
             <select
               className="campo-formulario"
-              defaultValue={lote?.id_producto ?? ""}
+              defaultValue={obtenerValor(
+                estado.values,
+                "id_producto",
+                lote?.id_producto?.toString() ?? ""
+              )}
               name="id_producto"
             >
               <option value="">Sin producto asignado</option>
@@ -92,7 +111,11 @@ export function FormularioLote({
             </span>
             <input
               className="campo-formulario"
-              defaultValue={lote?.variedad ?? ""}
+              defaultValue={obtenerValor(
+                estado.values,
+                "variedad",
+                lote?.variedad ?? ""
+              )}
               name="variedad"
               placeholder="Harina 000"
               type="text"
@@ -106,8 +129,13 @@ export function FormularioLote({
               Fecha de producción
             </span>
             <input
+              aria-invalid={tieneErrorCampo(estado.fieldErrors, "fecha_produccion")}
               className="campo-formulario"
-              defaultValue={lote?.fecha_produccion ?? ""}
+              defaultValue={obtenerValor(
+                estado.values,
+                "fecha_produccion",
+                lote?.fecha_produccion ?? ""
+              )}
               name="fecha_produccion"
               type="date"
             />
@@ -118,8 +146,13 @@ export function FormularioLote({
               Fecha de caducidad
             </span>
             <input
+              aria-invalid={tieneErrorCampo(estado.fieldErrors, "fecha_caducidad")}
               className="campo-formulario"
-              defaultValue={lote?.fecha_caducidad ?? ""}
+              defaultValue={obtenerValor(
+                estado.values,
+                "fecha_caducidad",
+                lote?.fecha_caducidad ?? ""
+              )}
               name="fecha_caducidad"
               type="date"
             />
@@ -132,7 +165,11 @@ export function FormularioLote({
           </span>
           <textarea
             className="campo-formulario min-h-28 resize-y"
-            defaultValue={lote?.observaciones ?? ""}
+            defaultValue={obtenerValor(
+              estado.values,
+              "observaciones",
+              lote?.observaciones ?? ""
+            )}
             name="observaciones"
             placeholder="Datos relevantes del lote, contexto de producción o notas del laboratorio."
           />

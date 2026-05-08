@@ -7,6 +7,11 @@ import {
   editar_producto,
   type EstadoFormularioProducto,
 } from "@/app/(privado)/productos/acciones";
+import {
+  obtenerErrorCampo,
+  obtenerValor,
+  tieneErrorCampo,
+} from "@/lib/form-state";
 import type { Producto } from "@/lib/tipos-dominio";
 
 const estadoInicial: EstadoFormularioProducto = {};
@@ -39,9 +44,9 @@ export function FormularioProducto({
         </Badge>
       </div>
 
-      {estado.error ? (
+      {estado.formError ? (
         <div className="mt-5 rounded-[22px] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {estado.error}
+          {estado.formError}
         </div>
       ) : null}
 
@@ -60,14 +65,24 @@ export function FormularioProducto({
               Clave
             </span>
             <input
+              aria-invalid={tieneErrorCampo(estado.fieldErrors, "clave")}
               className="campo-formulario"
-              defaultValue={producto?.clave ?? ""}
+              defaultValue={obtenerValor(
+                estado.values,
+                "clave",
+                producto?.clave ?? ""
+              )}
               name="clave"
               placeholder="HR000"
               required
               style={{ textTransform: "uppercase" }}
               type="text"
             />
+            {obtenerErrorCampo(estado.fieldErrors, "clave") ? (
+              <span className="mt-2 block text-xs text-red-600">
+                {obtenerErrorCampo(estado.fieldErrors, "clave")}
+              </span>
+            ) : null}
           </label>
 
           <label className="block">
@@ -75,13 +90,23 @@ export function FormularioProducto({
               Nombre
             </span>
             <input
+              aria-invalid={tieneErrorCampo(estado.fieldErrors, "nombre")}
               className="campo-formulario"
-              defaultValue={producto?.nombre ?? ""}
+              defaultValue={obtenerValor(
+                estado.values,
+                "nombre",
+                producto?.nombre ?? ""
+              )}
               name="nombre"
               placeholder="Harina 000"
               required
               type="text"
             />
+            {obtenerErrorCampo(estado.fieldErrors, "nombre") ? (
+              <span className="mt-2 block text-xs text-red-600">
+                {obtenerErrorCampo(estado.fieldErrors, "nombre")}
+              </span>
+            ) : null}
           </label>
         </div>
 
@@ -90,8 +115,13 @@ export function FormularioProducto({
             Descripción
           </span>
           <textarea
+            aria-invalid={tieneErrorCampo(estado.fieldErrors, "descripcion")}
             className="campo-formulario min-h-28 resize-y"
-            defaultValue={producto?.descripcion ?? ""}
+            defaultValue={obtenerValor(
+              estado.values,
+              "descripcion",
+              producto?.descripcion ?? ""
+            )}
             name="descripcion"
             placeholder="Información operativa del producto, uso o clasificación."
           />

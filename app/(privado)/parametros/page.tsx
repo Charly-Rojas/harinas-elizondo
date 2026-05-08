@@ -14,6 +14,7 @@ const opcionesEquipo: Array<{ valor: "todos" | TipoEquipo; etiqueta: string }> =
   { valor: "todos", etiqueta: "Todos" },
   { valor: "alveografo", etiqueta: "Alveógrafo" },
   { valor: "farinografo", etiqueta: "Farinógrafo" },
+  { valor: "otro", etiqueta: "Otro" },
 ];
 
 function colorEquipo(tipo: TipoEquipo) {
@@ -237,7 +238,7 @@ export default function PaginaParametros() {
                     </Badge>
                   </div>
 
-                  <div className="mt-4 flex flex-wrap gap-2">
+                    <div className="mt-4 flex flex-wrap gap-2">
                     <Badge
                       color={colorEquipo(parametro.equipo_origen)}
                       radius="full"

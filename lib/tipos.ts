@@ -1,10 +1,12 @@
 export type RolUsuario =
-  | "superadmin"
   | "admin"
+  | "gerente_laboratorio"
   | "gte_calidad"
   | "gte_plantas"
   | "dir_operaciones"
-  | "operador";
+  | "laboratorista";
+
+export type StatusUsuario = "pendiente" | "activo" | "rechazado" | "baja";
 
 export type PerfilUsuario = {
   id: string;
@@ -12,6 +14,7 @@ export type PerfilUsuario = {
   nombre: string | null;
   rol: RolUsuario;
   aprobado: boolean;
+  status: StatusUsuario;
   aprobado_en: string | null;
   aprobado_por: string | null;
   creado_en: string;
