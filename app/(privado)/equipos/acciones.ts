@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requiere_sesion } from "@/lib/autorizacion";
+import { requiere_permiso_escritura } from "@/lib/autorizacion";
 import type { FormState } from "@/lib/form-state";
 import { crearClienteServidor } from "@/lib/supabase/servidor";
 import type { TipoEquipo } from "@/lib/tipos-dominio";
@@ -89,7 +89,7 @@ export async function crear_equipo(
   _estado: EstadoFormularioEquipo,
   formData: FormData
 ): Promise<EstadoFormularioEquipo> {
-  const usuario = await requiere_sesion();
+  const usuario = await requiere_permiso_escritura();
 
   const values = extraerValores(formData);
   const clave = values.clave;
@@ -191,7 +191,7 @@ export async function editar_equipo(
   _estado: EstadoFormularioEquipo,
   formData: FormData
 ): Promise<EstadoFormularioEquipo> {
-  const usuario = await requiere_sesion();
+  const usuario = await requiere_permiso_escritura();
 
   const values = extraerValores(formData);
   const id_equipo = parseInt(values.id_equipo, 10);
@@ -292,7 +292,7 @@ export async function editar_equipo(
 }
 
 export async function cambiar_status_equipo(formData: FormData) {
-  const usuario = await requiere_sesion();
+  const usuario = await requiere_permiso_escritura();
 
   const id_equipo = parseInt(limpiar(formData.get("id_equipo")), 10);
   const status = limpiar(formData.get("status"));

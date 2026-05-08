@@ -20,6 +20,14 @@ export function es_administrador(rol: RolUsuario) {
   return rol === "admin" || rol === "gerente_laboratorio";
 }
 
+export function puede_escribir_panel(rol: RolUsuario) {
+  return (
+    rol === "admin" ||
+    rol === "gerente_laboratorio" ||
+    rol === "laboratorista"
+  );
+}
+
 export function es_gerente(rol: RolUsuario) {
   return (
     rol === "gte_calidad" ||
@@ -159,6 +167,16 @@ export async function requiere_admin(): Promise<UsuarioAutenticado> {
   const actual = await requiere_sesion();
 
   if (!usuario_activo(actual.perfil) || !es_administrador(actual.perfil.rol)) {
+    redirect("/");
+  }
+
+  return actual;
+}
+
+export async function requiere_permiso_escritura(): Promise<UsuarioAutenticado> {
+  const actual = await requiere_sesion();
+
+  if (!usuario_activo(actual.perfil) || !puede_escribir_panel(actual.perfil.rol)) {
     redirect("/");
   }
 

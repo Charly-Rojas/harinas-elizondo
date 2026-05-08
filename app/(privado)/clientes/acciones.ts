@@ -12,7 +12,7 @@ import {
   type DireccionEstructurada,
 } from "@/lib/direcciones";
 import type { FormState } from "@/lib/form-state";
-import { requiere_sesion } from "@/lib/autorizacion";
+import { requiere_permiso_escritura } from "@/lib/autorizacion";
 import { crearClienteServidor } from "@/lib/supabase/servidor";
 import type { ClienteFormValues } from "@/lib/tipos-clientes";
 
@@ -315,7 +315,7 @@ export async function crear_cliente(
   _estado: EstadoFormularioCliente,
   formData: FormData
 ): Promise<EstadoFormularioCliente> {
-  const usuario = await requiere_sesion();
+  const usuario = await requiere_permiso_escritura();
   const values = construirValoresCliente(formData);
   const id_cliente = parseInt(values.id_cliente, 10);
   const nombre = values.nombre;
@@ -475,7 +475,7 @@ export async function editar_cliente(
   _estado: EstadoFormularioCliente,
   formData: FormData
 ): Promise<EstadoFormularioCliente> {
-  const usuario = await requiere_sesion();
+  const usuario = await requiere_permiso_escritura();
   const values = construirValoresCliente(formData);
 
   const id_cliente = parseInt(values.id_cliente, 10);
@@ -616,7 +616,7 @@ export async function editar_cliente(
 // ─── CAMBIAR STATUS ──────────────────────────────────────
 
 export async function cambiar_status_cliente(formData: FormData) {
-  const usuario = await requiere_sesion();
+  const usuario = await requiere_permiso_escritura();
 
   const id_cliente = parseInt(limpiar(formData.get("id_cliente")), 10);
   const nuevo_status = limpiar(formData.get("nuevo_status"));

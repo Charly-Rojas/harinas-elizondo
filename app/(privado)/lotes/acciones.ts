@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requiere_sesion } from "@/lib/autorizacion";
+import { requiere_permiso_escritura } from "@/lib/autorizacion";
 import type { FormState } from "@/lib/form-state";
 import { crearClienteServidor } from "@/lib/supabase/servidor";
 
@@ -31,6 +31,10 @@ function numeroOpcional(valor: string) {
   return Number.isFinite(numero) ? numero : null;
 }
 
+function esStatusLoteValido(valor: string): valor is "activo" | "agotado" {
+  return valor === "activo" || valor === "agotado";
+}
+
 function extraerValores(formData: FormData): ValoresFormularioLote {
   return {
     id_lote: limpiar(formData.get("id_lote")),
@@ -55,7 +59,7 @@ export async function crear_lote(
   _estado: EstadoFormularioLote,
   formData: FormData
 ): Promise<EstadoFormularioLote> {
-  const usuario = await requiere_sesion();
+  const usuario = await requiere_permiso_escritura();
 
   const values = extraerValores(formData);
   const numero_lote = values.numero_lote;
@@ -120,11 +124,33 @@ export async function crear_lote(
   redirect("/lotes");
 }
 
+export async function cambiar_status_lote(formData: FormData) {
+  const usuario = await requiere_permiso_escritura();
+
+  const id_lote = parseInt(limpiar(formData.get("id_lote")), 10);
+  const status = limpiar(formData.get("status"));
+
+  if (!id_lote || !esStatusLoteValido(status)) return;
+
+  const supabase = await crearClienteServidor();
+
+  await supabase
+    .from("lotes_produccion")
+    .update({
+      status,
+      actualizado_por: usuario.usuario.id,
+    })
+    .eq("id_lote", id_lote);
+
+  revalidatePath("/lotes");
+  revalidatePath(`/lotes/${id_lote}`);
+}
+
 export async function editar_lote(
   _estado: EstadoFormularioLote,
   formData: FormData
 ): Promise<EstadoFormularioLote> {
-  const usuario = await requiere_sesion();
+  const usuario = await requiere_permiso_escritura();
 
   const values = extraerValores(formData);
   const id_lote = parseInt(values.id_lote, 10);

@@ -279,30 +279,28 @@ export async function generarPdfCertificado(payload: PayloadPdfCertificado) {
     10
   );
 
-  if (payload.domicilioEntrega) {
-    y -= 24;
-    page.drawText(
-      payload.domicilioEntregaEtiqueta
-        ? `Domicilio de entrega (${payload.domicilioEntregaEtiqueta})`
-        : "Domicilio de entrega",
-      {
-        x: 36,
-        y,
-        size: 9,
-        font: fontBold,
-        color: COLOR_MUTED,
-      }
-    );
-    y = dibujarTextoAjustado(
-      page,
-      font,
-      payload.domicilioEntrega,
-      36,
-      y - 14,
-      520,
-      10
-    );
-  }
+  y -= 24;
+  page.drawText(
+    payload.domicilioEntregaEtiqueta
+      ? `Domicilio de entrega (${payload.domicilioEntregaEtiqueta})`
+      : "Domicilio de entrega",
+    {
+      x: 36,
+      y,
+      size: 9,
+      font: fontBold,
+      color: COLOR_MUTED,
+    }
+  );
+  y = dibujarTextoAjustado(
+    page,
+    font,
+    payload.domicilioEntrega || "-",
+    36,
+    y - 14,
+    520,
+    10
+  );
 
   y -= 8;
   page.drawText("Resultados", {

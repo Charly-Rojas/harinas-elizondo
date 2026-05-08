@@ -1,6 +1,7 @@
 import type { Direccion } from "@/lib/tipos-clientes";
 
 export type EstadoRegistro = "activo" | "inactivo" | "baja";
+export type EstadoLote = "activo" | "agotado";
 export type TipoEquipo = "alveografo" | "farinografo" | "otro";
 export type TipoOrigenInspeccion = "medicion" | "ajuste" | "certificado";
 export type EstadoInspeccion = "borrador" | "cerrada" | "aprobada" | "cancelada";
@@ -88,6 +89,7 @@ export type LoteProduccion = {
   fecha_produccion: string | null;
   fecha_caducidad: string | null;
   observaciones: string | null;
+  status: EstadoLote;
   creado_en: string;
   actualizado_en: string;
   creado_por: string | null;

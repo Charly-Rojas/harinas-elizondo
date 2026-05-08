@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requiere_sesion } from "@/lib/autorizacion";
+import { requiere_permiso_escritura } from "@/lib/autorizacion";
 import { registrarAuditoria } from "@/lib/auditoria";
 import {
   descargarPdfCertificado,
@@ -115,7 +115,7 @@ export async function crear_certificado(
   _estado: EstadoFormularioCertificado,
   formData: FormData
 ): Promise<EstadoFormularioCertificado> {
-  const usuario = await requiere_sesion();
+  const usuario = await requiere_permiso_escritura();
 
   const values = extraerValoresFormulario(formData);
   const id_inspeccion = parseInt(values.id_inspeccion, 10);
@@ -351,6 +351,7 @@ export async function crear_certificado(
               fecha_produccion: loteRelacionado.fecha_produccion ?? null,
               fecha_caducidad: loteRelacionado.fecha_caducidad ?? null,
               observaciones: null,
+              status: "activo",
               creado_en: "",
               actualizado_en: "",
               creado_por: null,
@@ -464,7 +465,7 @@ export async function crear_certificado(
 }
 
 export async function enviar_certificado_cliente(formData: FormData) {
-  const usuario = await requiere_sesion();
+  const usuario = await requiere_permiso_escritura();
   const idCertificado = parseInt(limpiar(formData.get("id_certificado")), 10);
 
   if (!idCertificado) {

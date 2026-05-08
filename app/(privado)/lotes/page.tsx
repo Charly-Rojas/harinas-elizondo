@@ -1,13 +1,24 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { Badge, Button } from "@radix-ui/themes";
+import { cambiar_status_lote } from "@/app/(privado)/lotes/acciones";
 import { FormularioLote } from "@/componentes/panel/formulario-lote";
 import { IconoBuscar } from "@/componentes/panel/iconos";
 import { crearClienteNavegador } from "@/lib/supabase/cliente";
 import type { LoteConRelaciones, ProductoLigero } from "@/lib/tipos-dominio";
+import type { RolUsuario } from "@/lib/tipos";
 
 type Vista = "lista" | "crear" | "editar";
+
+function rolPuedeEscribir(rol: RolUsuario) {
+  return (
+    rol === "admin" ||
+    rol === "gerente_laboratorio" ||
+    rol === "laboratorista"
+  );
+}
 
 export default function PaginaLotes() {
   const [lotes, setLotes] = useState<LoteConRelaciones[]>([]);
@@ -16,12 +27,20 @@ export default function PaginaLotes() {
   const [vista, setVista] = useState<Vista>("lista");
   const [busqueda, setBusqueda] = useState("");
   const [loteEditar, setLoteEditar] = useState<LoteConRelaciones | undefined>();
+  const [puedeEscribir, setPuedeEscribir] = useState(false);
+  const [pendiente, iniciarTransicion] = useTransition();
 
-  async function cargarDatos() {
-    setCargando(true);
+  async function cargarDatos({ mostrarCarga = true } = {}) {
+    if (mostrarCarga) setCargando(true);
     const supabase = crearClienteNavegador();
 
-    const [{ data: lotesData }, { data: productosData }] = await Promise.all([
+    const [
+      { data: lotesData },
+      { data: productosData },
+      {
+        data: { user },
+      },
+    ] = await Promise.all([
       supabase
         .from("lotes_produccion")
         .select("*, productos(*), inspecciones(*)")
@@ -31,7 +50,20 @@ export default function PaginaLotes() {
         .select("id_producto, clave, nombre, activo")
         .eq("activo", true)
         .order("nombre", { ascending: true }),
+      supabase.auth.getUser(),
     ]);
+
+    if (user) {
+      const { data: perfil } = await supabase
+        .from("perfiles")
+        .select("rol")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      setPuedeEscribir(
+        perfil?.rol ? rolPuedeEscribir(perfil.rol as RolUsuario) : false
+      );
+    }
 
     setLotes((lotesData ?? []) as LoteConRelaciones[]);
     setProductos((productosData ?? []) as ProductoLigero[]);
@@ -39,11 +71,57 @@ export default function PaginaLotes() {
   }
 
   useEffect(() => {
+    let activo = true;
+
     async function inicializar() {
-      await cargarDatos();
+      const supabase = crearClienteNavegador();
+
+      const [
+        { data: lotesData },
+        { data: productosData },
+        {
+          data: { user },
+        },
+      ] = await Promise.all([
+        supabase
+          .from("lotes_produccion")
+          .select("*, productos(*), inspecciones(*)")
+          .order("creado_en", { ascending: false }),
+        supabase
+          .from("productos")
+          .select("id_producto, clave, nombre, activo")
+          .eq("activo", true)
+          .order("nombre", { ascending: true }),
+        supabase.auth.getUser(),
+      ]);
+
+      let puedeEscribirActual = false;
+
+      if (user) {
+        const { data: perfil } = await supabase
+          .from("perfiles")
+          .select("rol")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        puedeEscribirActual = perfil?.rol
+          ? rolPuedeEscribir(perfil.rol as RolUsuario)
+          : false;
+      }
+
+      if (!activo) return;
+
+      setLotes((lotesData ?? []) as LoteConRelaciones[]);
+      setProductos((productosData ?? []) as ProductoLigero[]);
+      setPuedeEscribir(puedeEscribirActual);
+      setCargando(false);
     }
 
     void inicializar();
+
+    return () => {
+      activo = false;
+    };
   }, []);
 
   function abrirEdicion(lote: LoteConRelaciones) {
@@ -55,6 +133,24 @@ export default function PaginaLotes() {
     setVista("lista");
     setLoteEditar(undefined);
     cargarDatos();
+  }
+
+  function marcarComoAgotado(idLote: number) {
+    iniciarTransicion(async () => {
+      const fd = new FormData();
+      fd.set("id_lote", String(idLote));
+      fd.set("status", "agotado");
+      await cambiar_status_lote(fd);
+      await cargarDatos({ mostrarCarga: false });
+    });
+  }
+
+  function colorStatusLote(status: LoteConRelaciones["status"]) {
+    return status === "agotado" ? "red" : "green";
+  }
+
+  function textoStatusLote(status: LoteConRelaciones["status"]) {
+    return status === "agotado" ? "Agotado" : "Activo";
   }
 
   const filtrados = useMemo(() => {
@@ -96,9 +192,11 @@ export default function PaginaLotes() {
           Registra los lotes de producción que servirán como base para las
           inspecciones y los certificados.
         </p>
-        <Button onClick={() => setVista("crear")} size="3">
-          + Nuevo lote
-        </Button>
+        {puedeEscribir ? (
+          <Button onClick={() => setVista("crear")} size="3">
+            + Nuevo lote
+          </Button>
+        ) : null}
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -173,6 +271,13 @@ export default function PaginaLotes() {
                         ? `${lote.inspecciones?.length ?? 0} inspecciones`
                         : "Sin inspecciones"}
                     </Badge>
+                    <Badge
+                      color={colorStatusLote(lote.status)}
+                      radius="full"
+                      variant="soft"
+                    >
+                      {textoStatusLote(lote.status)}
+                    </Badge>
                     {lote.fecha_produccion ? (
                       <Badge color="gray" radius="full" variant="soft">
                         Prod. {lote.fecha_produccion}
@@ -181,13 +286,31 @@ export default function PaginaLotes() {
                   </div>
 
                   <div className="mt-4 flex flex-wrap gap-2">
-                    <Button
-                      onClick={() => abrirEdicion(lote)}
-                      size="2"
-                      variant="soft"
-                    >
-                      Editar
+                    <Button asChild size="2" variant="soft">
+                      <Link href={`/lotes/${lote.id_lote}`}>Detalle</Link>
                     </Button>
+                    {puedeEscribir ? (
+                      <>
+                        <Button
+                          onClick={() => abrirEdicion(lote)}
+                          size="2"
+                          variant="soft"
+                        >
+                          Editar
+                        </Button>
+                        {lote.status !== "agotado" ? (
+                          <Button
+                            color="red"
+                            disabled={pendiente}
+                            onClick={() => marcarComoAgotado(lote.id_lote)}
+                            size="2"
+                            variant="soft"
+                          >
+                            Marcar como agotado
+                          </Button>
+                        ) : null}
+                      </>
+                    ) : null}
                   </div>
                 </article>
               ))}
@@ -211,6 +334,9 @@ export default function PaginaLotes() {
                     </th>
                     <th className="px-5 py-3.5 font-semibold text-slate-500">
                       Inspecciones
+                    </th>
+                    <th className="px-5 py-3.5 font-semibold text-slate-500">
+                      Estado
                     </th>
                     <th className="px-5 py-3.5 text-right font-semibold text-slate-500">
                       Acciones
@@ -246,14 +372,42 @@ export default function PaginaLotes() {
                         </Badge>
                       </td>
                       <td className="px-5 py-4">
+                        <Badge
+                          color={colorStatusLote(lote.status)}
+                          radius="full"
+                          size="1"
+                          variant="soft"
+                        >
+                          {textoStatusLote(lote.status)}
+                        </Badge>
+                      </td>
+                      <td className="px-5 py-4">
                         <div className="flex items-center justify-end gap-2">
-                          <Button
-                            onClick={() => abrirEdicion(lote)}
-                            size="1"
-                            variant="soft"
-                          >
-                            Editar
+                          <Button asChild size="1" variant="soft">
+                            <Link href={`/lotes/${lote.id_lote}`}>Detalle</Link>
                           </Button>
+                          {puedeEscribir ? (
+                            <>
+                              <Button
+                                onClick={() => abrirEdicion(lote)}
+                                size="1"
+                                variant="soft"
+                              >
+                                Editar
+                              </Button>
+                              {lote.status !== "agotado" ? (
+                                <Button
+                                  color="red"
+                                  disabled={pendiente}
+                                  onClick={() => marcarComoAgotado(lote.id_lote)}
+                                  size="1"
+                                  variant="soft"
+                                >
+                                  Marcar como agotado
+                                </Button>
+                              ) : null}
+                            </>
+                          ) : null}
                         </div>
                       </td>
                     </tr>

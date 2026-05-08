@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requiere_sesion } from "@/lib/autorizacion";
+import { requiere_permiso_escritura } from "@/lib/autorizacion";
 import type { FormState } from "@/lib/form-state";
 import { crearClienteServidor } from "@/lib/supabase/servidor";
 
@@ -43,7 +43,7 @@ export async function crear_producto(
   _estado: EstadoFormularioProducto,
   formData: FormData
 ): Promise<EstadoFormularioProducto> {
-  await requiere_sesion();
+  await requiere_permiso_escritura();
 
   const values = extraerValores(formData);
   const clave = values.clave;
@@ -96,7 +96,7 @@ export async function editar_producto(
   _estado: EstadoFormularioProducto,
   formData: FormData
 ): Promise<EstadoFormularioProducto> {
-  await requiere_sesion();
+  await requiere_permiso_escritura();
 
   const values = extraerValores(formData);
   const id_producto = parseInt(values.id_producto, 10);
@@ -151,7 +151,7 @@ export async function editar_producto(
 }
 
 export async function cambiar_estado_producto(formData: FormData) {
-  await requiere_sesion();
+  await requiere_permiso_escritura();
 
   const id_producto = parseInt(limpiar(formData.get("id_producto")), 10);
   const activo = formData.get("activo") === "true";

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requiere_sesion } from "@/lib/autorizacion";
+import { requiere_permiso_escritura } from "@/lib/autorizacion";
 import { registrarAuditoria } from "@/lib/auditoria";
 import type { FormState } from "@/lib/form-state";
 import { crearClienteServidor } from "@/lib/supabase/servidor";
@@ -307,7 +307,7 @@ export async function crear_inspeccion(
   _estado: EstadoFormularioInspeccion,
   formData: FormData
 ): Promise<EstadoFormularioInspeccion> {
-  const usuario = await requiere_sesion();
+  const usuario = await requiere_permiso_escritura();
 
   const values = extraerValores(formData);
   const id_lote = parseInt(values.id_lote, 10);
@@ -393,7 +393,7 @@ export async function editar_inspeccion(
   _estado: EstadoFormularioInspeccion,
   formData: FormData
 ): Promise<EstadoFormularioInspeccion> {
-  const usuario = await requiere_sesion();
+  const usuario = await requiere_permiso_escritura();
 
   const values = extraerValores(formData);
   const id_inspeccion = parseInt(values.id_inspeccion, 10);
@@ -475,7 +475,7 @@ export async function crear_ajuste_inspeccion(
   _estado: EstadoFormularioInspeccion,
   formData: FormData
 ): Promise<EstadoFormularioInspeccion> {
-  const usuario = await requiere_sesion();
+  const usuario = await requiere_permiso_escritura();
 
   const values = extraerValores(formData);
   const id_inspeccion_base = parseInt(values.id_inspeccion_base, 10);

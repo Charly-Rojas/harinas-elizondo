@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requiere_sesion } from "@/lib/autorizacion";
+import { requiere_permiso_escritura } from "@/lib/autorizacion";
 import type { FormState } from "@/lib/form-state";
 import { crearClienteServidor } from "@/lib/supabase/servidor";
 import type { TipoEquipo } from "@/lib/tipos-dominio";
@@ -71,7 +71,7 @@ export async function crear_parametro(
   _estado: EstadoFormularioParametro,
   formData: FormData
 ): Promise<EstadoFormularioParametro> {
-  await requiere_sesion();
+  await requiere_permiso_escritura();
 
   const values = extraerValores(formData);
   const clave = values.clave;
@@ -160,7 +160,7 @@ export async function editar_parametro(
   _estado: EstadoFormularioParametro,
   formData: FormData
 ): Promise<EstadoFormularioParametro> {
-  await requiere_sesion();
+  await requiere_permiso_escritura();
 
   const values = extraerValores(formData);
   const id_parametro = parseInt(values.id_parametro, 10);
@@ -251,7 +251,7 @@ export async function editar_parametro(
 }
 
 export async function cambiar_estado_parametro(formData: FormData) {
-  await requiere_sesion();
+  await requiere_permiso_escritura();
 
   const id_parametro = parseInt(limpiar(formData.get("id_parametro")), 10);
   const activo = formData.get("activo") === "true";

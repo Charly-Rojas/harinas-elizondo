@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { Badge, Button } from "@radix-ui/themes";
 import {
+  cambiar_status_lote,
   crear_lote,
   editar_lote,
   type EstadoFormularioLote,
@@ -190,6 +191,16 @@ export function FormularioLote({
           </Button>
         </div>
       </form>
+
+      {lote && lote.status !== "agotado" ? (
+        <form action={cambiar_status_lote} className="mt-4 border-t border-slate-200 pt-4">
+          <input name="id_lote" type="hidden" value={lote.id_lote} />
+          <input name="status" type="hidden" value="agotado" />
+          <Button color="red" size="3" type="submit" variant="soft">
+            Marcar como agotado
+          </Button>
+        </form>
+      ) : null}
     </article>
   );
 }
