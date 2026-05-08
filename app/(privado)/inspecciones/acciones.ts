@@ -143,7 +143,7 @@ async function construirResultadosPersistencia(
     await Promise.all([
       supabase
         .from("parametros_calidad")
-        .select("id_parametro, clave, unidad_medida")
+        .select("id_parametro, clave, unidad_medida, lim_min_global, lim_max_global")
         .in("id_parametro", idsParametros),
       idCliente
         ? supabase
@@ -185,9 +185,15 @@ async function construirResultadosPersistencia(
         : undefined;
 
     const lim_min_aplicado =
-      refCliente?.lim_min ?? refEquipo?.lim_min_internacional ?? null;
+      refCliente?.lim_min ??
+      refEquipo?.lim_min_internacional ??
+      parametro?.lim_min_global ??
+      null;
     const lim_max_aplicado =
-      refCliente?.lim_max ?? refEquipo?.lim_max_internacional ?? null;
+      refCliente?.lim_max ??
+      refEquipo?.lim_max_internacional ??
+      parametro?.lim_max_global ??
+      null;
     const origen_limites: OrigenLimites = refCliente
       ? "cliente"
       : refEquipo

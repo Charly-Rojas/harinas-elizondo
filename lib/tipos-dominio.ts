@@ -48,6 +48,8 @@ export type ParametroCalidad = {
   nombre: string;
   unidad_medida: string | null;
   equipo_origen: TipoEquipo;
+  lim_min_global: number | null;
+  lim_max_global: number | null;
   descripcion: string | null;
   activo: boolean;
   creado_en: string;

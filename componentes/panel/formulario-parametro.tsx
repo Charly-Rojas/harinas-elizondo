@@ -105,12 +105,11 @@ export function FormularioParametro({
             </span>
             <select
               className="campo-formulario"
-              defaultValue={parametro?.equipo_origen ?? "otro"}
+              defaultValue={parametro?.equipo_origen ?? "alveografo"}
               name="equipo_origen"
             >
               <option value="alveografo">Alveógrafo</option>
               <option value="farinografo">Farinógrafo</option>
-              <option value="otro">Otro</option>
             </select>
           </label>
 
@@ -123,6 +122,36 @@ export function FormularioParametro({
               defaultValue={parametro?.descripcion ?? ""}
               name="descripcion"
               placeholder="Contexto operativo del parámetro y cómo se interpreta."
+            />
+          </label>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <label className="block">
+            <span className="mb-2 block text-sm font-medium text-slate-600">
+              Límite inferior global
+            </span>
+            <input
+              className="campo-formulario"
+              defaultValue={parametro?.lim_min_global ?? ""}
+              name="lim_min_global"
+              placeholder="0.0000"
+              step="0.0001"
+              type="number"
+            />
+          </label>
+
+          <label className="block">
+            <span className="mb-2 block text-sm font-medium text-slate-600">
+              Límite superior global
+            </span>
+            <input
+              className="campo-formulario"
+              defaultValue={parametro?.lim_max_global ?? ""}
+              name="lim_max_global"
+              placeholder="100.0000"
+              step="0.0001"
+              type="number"
             />
           </label>
         </div>

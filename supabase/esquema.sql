@@ -209,10 +209,33 @@ create table if not exists public.parametros_calidad (
   unidad_medida text,
   equipo_origen text not null default 'otro'
     check (equipo_origen in ('alveografo', 'farinografo', 'otro')),
+  lim_min_global numeric(12, 4),
+  lim_max_global numeric(12, 4),
   descripcion text,
   activo boolean not null default true,
   creado_en timestamptz not null default timezone('utc', now()),
-  actualizado_en timestamptz not null default timezone('utc', now())
+  actualizado_en timestamptz not null default timezone('utc', now()),
+  constraint parametros_calidad_limites_globales_chk check (
+    lim_min_global is null
+    or lim_max_global is null
+    or lim_min_global <= lim_max_global
+  )
+);
+
+alter table public.parametros_calidad
+add column if not exists lim_min_global numeric(12, 4);
+
+alter table public.parametros_calidad
+add column if not exists lim_max_global numeric(12, 4);
+
+alter table public.parametros_calidad
+drop constraint if exists parametros_calidad_limites_globales_chk;
+
+alter table public.parametros_calidad
+add constraint parametros_calidad_limites_globales_chk check (
+  lim_min_global is null
+  or lim_max_global is null
+  or lim_min_global <= lim_max_global
 );
 
 create table if not exists public.equipos_parametros (
@@ -713,36 +736,54 @@ insert into public.parametros_calidad (
   nombre,
   unidad_medida,
   equipo_origen,
+  lim_min_global,
+  lim_max_global,
   descripcion
 )
 values
   -- Alveografo (CHOPIN AlveoLab)
-  ('ALV_P',  'Tenacidad (P)',               'mm',       'alveografo', 'Resistencia de la masa a ser estirada; corresponde a la altura de la curva.'),
-  ('ALV_L',  'Extensibilidad (L)',           'mm',       'alveografo', 'Capacidad de la masa de estirarse sin romperse; corresponde a la longitud de la curva.'),
-  ('ALV_W',  'Fuerza panadera (W)',          '10⁻⁴ J',  'alveografo', 'Energia total de deformacion; area bajo la curva alveografica.'),
-  ('ALV_PL', 'Relacion P/L',                null,       'alveografo', 'Balance entre tenacidad y extensibilidad; indica el equilibrio de la masa.'),
-  ('ALV_IE', 'Indice de elasticidad (Ie)',   '%',        'alveografo', 'Capacidad de la masa para recuperar su forma original al ser estirada.'),
+  ('ALV_P',  'Tenacidad (P)',               'mm',       'alveografo', 40,   120,  'Resistencia de la masa a ser estirada; corresponde a la altura de la curva.'),
+  ('ALV_L',  'Extensibilidad (L)',           'mm',       'alveografo', 40,   160,  'Capacidad de la masa de estirarse sin romperse; corresponde a la longitud de la curva.'),
+  ('ALV_W',  'Fuerza panadera (W)',          '10⁻⁴ J',  'alveografo', 180,  350,  'Energia total de deformacion; area bajo la curva alveografica.'),
+  ('ALV_S',  'Area de la curva',             null,       'alveografo', 60,   180,  'Parametro S del alveografo.'),
+  ('ALV_PL', 'Relacion P/L',                null,       'alveografo', 0.4,  1.5,  'Balance entre tenacidad y extensibilidad; indica el equilibrio de la masa.'),
+  ('ALV_IE', 'Indice de elasticidad (Ie)',   '%',        'alveografo', 45,   70,   'Capacidad de la masa para recuperar su forma original al ser estirada.'),
   -- Farinografo / DoughLAB (Brabender)
-  ('FAR_ABS', 'Absorcion de agua',          '%',   'farinografo', 'Porcentaje de agua necesario para alcanzar la consistencia optima de masa.'),
-  ('FAR_DES', 'Tiempo de desarrollo',       'min', 'farinografo', 'Tiempo para que la masa alcance la consistencia deseada desde el inicio del amasado.'),
-  ('FAR_EST', 'Estabilidad',                'min', 'farinografo', 'Duracion en la que la masa mantiene la consistencia optima; indica tolerancia al amasado.'),
-  ('FAR_REB', 'Grado de decaimiento',       'UF',  'farinografo', 'Descenso de consistencia al continuar amasando; cuanto mayor, mas debil la harina.'),
-  -- Reofermentografo (CHOPIN Rheo F4)
-  ('REO_T1',  'Tiempo de desarrollo maximo (T1)', 'h:min', 'otro', 'Tiempo al que la masa alcanza su volumen maximo de desarrollo.'),
-  ('REO_HM',  'Altura de desarrollo maximo (Hm)', 'mm',    'otro', 'Desarrollo maximo de la masa bajo esfuerzo de fermentacion.'),
-  ('REO_TOL', 'Tolerancia de masa (DT2)',          'min',   'otro', 'Diferencia T2 - T2''; indica la estabilidad de la masa en su punto maximo.'),
-  ('REO_HMP', 'Altura maxima de CO2 (H''m)',       'mm',    'otro', 'Pico de la curva de desprendimiento gaseoso.'),
-  ('REO_TX',  'Tiempo de porosidad (Tx)',           'h:min', 'otro', 'Momento en que la masa comienza a liberar CO2 al exterior.'),
-  ('REO_VOL', 'Volumen total de gas',               'mL',    'otro', 'Volumen total de CO2 desprendido durante la fermentacion (A1+A2).'),
-  ('REO_RET', 'Volumen de retencion',               'mL',    'otro', 'Volumen de CO2 retenido en la masa al final de la prueba (A1).'),
+  ('FAR_ABS', 'Absorcion de agua',          '%',   'farinografo', 55,   65,   'Porcentaje de agua necesario para alcanzar la consistencia optima de masa.'),
+  ('FAR_DES', 'Tiempo de desarrollo',       'min', 'farinografo', 1.5,  8,    'Tiempo para que la masa alcance la consistencia deseada desde el inicio del amasado.'),
+  ('FAR_EST', 'Estabilidad',                'min', 'farinografo', 4,    12,   'Duracion en la que la masa mantiene la consistencia optima; indica tolerancia al amasado.'),
+  ('FAR_REB', 'Grado de decaimiento',       'UF',  'farinografo', 0,    100,  'Descenso de consistencia al continuar amasando; cuanto mayor, mas debil la harina.'),
+  ('FAR_FQN', 'Numero de calidad',           null,  'farinografo', 50,   200,  'Farinograph Quality Number.'),
+  -- Reofermentografo / laboratorio de masa
+  ('REO_T1',  'Tiempo de desarrollo maximo (T1)', 'h:min', 'farinografo', 1,    4,    'Tiempo al que la masa alcanza su volumen maximo de desarrollo.'),
+  ('REO_HM',  'Altura de desarrollo maximo (Hm)', 'mm',    'farinografo', 20,   70,   'Desarrollo maximo de la masa bajo esfuerzo de fermentacion.'),
+  ('REO_TOL', 'Tolerancia de masa (DT2)',          'min',   'farinografo', 15,   90,   'Diferencia T2 - T2''; indica la estabilidad de la masa en su punto maximo.'),
+  ('REO_HMP', 'Altura maxima de CO2 (H''m)',       'mm',    'farinografo', 30,   80,   'Pico de la curva de desprendimiento gaseoso.'),
+  ('REO_TX',  'Tiempo de porosidad (Tx)',           'h:min', 'farinografo', 1,    4,    'Momento en que la masa comienza a liberar CO2 al exterior.'),
+  ('REO_VOL', 'Volumen total de gas',               'mL',    'farinografo', 800,  1800, 'Volumen total de CO2 desprendido durante la fermentacion (A1+A2).'),
+  ('REO_RET', 'Volumen de retencion',               'mL',    'farinografo', 500,  1400, 'Volumen de CO2 retenido en la masa al final de la prueba (A1).'),
   -- Analisis Basicos (Laboratorio General)
-  ('BAS_HUM', 'Humedad',        'g/100g',  'otro', 'Contenido de agua de la harina; maximo permitido 15 g/100g segun CAA (harinas 000 y 0000).'),
-  ('BAS_CEN', 'Cenizas',        'g/100g',  'otro', 'Contenido mineral; indica grado de extraccion e impurezas de salvado.'),
-  ('BAS_GH',  'Gluten humedo',  '%',       'otro', 'Proteinas insolubles con agua absorbida; obtenido por lavado de masa.'),
-  ('BAS_GS',  'Gluten seco',    '%',       'otro', 'Proteinas insolubles deshidratadas; permite calcular relacion GH/GS.'),
-  ('BAS_GI',  'Gluten Index',   null,      'otro', 'Indice de calidad del gluten en escala 0-100; relacionado con fuerza y cohesion.'),
-  ('BAS_FN',  'Falling Number', 'seg',     'otro', 'Actividad alfa-amilasica; valores bajos indican germinacion del trigo y harinas de baja calidad.'),
-  ('BAS_ALM', 'Almidon danado', 'UCD',     'otro', 'Dano mecanico del almidon durante molienda; rango optimo 16-23 UCD para panificacion.'),
-  ('BAS_COL', 'Color',          null,      'otro', 'Apreciacion visual o colorimetrica de la harina.'),
-  ('BAS_GRA', 'Granulometria',  'µm / %',  'otro', 'Distribucion de tamano de particula; influye en absorcion y comportamiento de la masa.')
-on conflict (clave) do nothing;
+  ('BAS_HUM', 'Humedad',        'g/100g',  'farinografo', 0,    15,   'Contenido de agua de la harina; maximo permitido 15 g/100g segun CAA (harinas 000 y 0000).'),
+  ('BAS_CEN', 'Cenizas',        'g/100g',  'farinografo', 0,    1,    'Contenido mineral; indica grado de extraccion e impurezas de salvado.'),
+  ('BAS_GH',  'Gluten humedo',  '%',       'farinografo', 20,   40,   'Proteinas insolubles con agua absorbida; obtenido por lavado de masa.'),
+  ('BAS_GS',  'Gluten seco',    '%',       'farinografo', 7,    14,   'Proteinas insolubles deshidratadas; permite calcular relacion GH/GS.'),
+  ('BAS_GI',  'Gluten Index',   null,      'farinografo', 60,   100,  'Indice de calidad del gluten en escala 0-100; relacionado con fuerza y cohesion.'),
+  ('BAS_FN',  'Falling Number', 'seg',     'farinografo', 250,  400,  'Actividad alfa-amilasica; valores bajos indican germinacion del trigo y harinas de baja calidad.'),
+  ('BAS_ALM', 'Almidon danado', 'UCD',     'farinografo', 16,   23,   'Dano mecanico del almidon durante molienda; rango optimo 16-23 UCD para panificacion.'),
+  ('BAS_COL', 'Color',          null,      'farinografo', 0,    100,  'Apreciacion visual o colorimetrica de la harina.'),
+  ('BAS_GRA', 'Granulometria',  'µm / %',  'farinografo', 0,    1000, 'Distribucion de tamano de particula; influye en absorcion y comportamiento de la masa.')
+on conflict (clave) do update
+set
+  nombre = excluded.nombre,
+  unidad_medida = excluded.unidad_medida,
+  equipo_origen = excluded.equipo_origen,
+  lim_min_global = excluded.lim_min_global,
+  lim_max_global = excluded.lim_max_global,
+  descripcion = excluded.descripcion,
+  activo = true,
+  actualizado_en = timezone('utc', now());
+
+update public.parametros_calidad
+set equipo_origen = 'farinografo',
+    actualizado_en = timezone('utc', now())
+where equipo_origen not in ('alveografo', 'farinografo');

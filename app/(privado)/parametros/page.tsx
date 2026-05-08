@@ -14,13 +14,16 @@ const opcionesEquipo: Array<{ valor: "todos" | TipoEquipo; etiqueta: string }> =
   { valor: "todos", etiqueta: "Todos" },
   { valor: "alveografo", etiqueta: "Alveógrafo" },
   { valor: "farinografo", etiqueta: "Farinógrafo" },
-  { valor: "otro", etiqueta: "Otro" },
 ];
 
 function colorEquipo(tipo: TipoEquipo) {
   if (tipo === "alveografo") return "indigo";
   if (tipo === "farinografo") return "orange";
   return "gray";
+}
+
+function formatearLimite(valor: number | null) {
+  return valor === null ? "-" : new Intl.NumberFormat("es-MX").format(valor);
 }
 
 export default function PaginaParametros() {
@@ -47,7 +50,26 @@ export default function PaginaParametros() {
   }
 
   useEffect(() => {
-    cargarParametros();
+    let activo = true;
+
+    async function cargarInicial() {
+      const supabase = crearClienteNavegador();
+      const { data } = await supabase
+        .from("parametros_calidad")
+        .select("*")
+        .order("nombre", { ascending: true });
+
+      if (!activo) return;
+
+      setParametros((data ?? []) as ParametroCalidad[]);
+      setCargando(false);
+    }
+
+    void cargarInicial();
+
+    return () => {
+      activo = false;
+    };
   }, []);
 
   function cerrarFormulario() {
@@ -230,6 +252,25 @@ export default function PaginaParametros() {
                     ) : null}
                   </div>
 
+                  <dl className="mt-4 grid grid-cols-2 gap-3 rounded-[18px] bg-slate-50 px-3 py-3 text-sm">
+                    <div>
+                      <dt className="text-xs font-medium text-slate-400">
+                        Límite inf.
+                      </dt>
+                      <dd className="mt-1 font-semibold text-slate-700">
+                        {formatearLimite(parametro.lim_min_global)}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs font-medium text-slate-400">
+                        Límite sup.
+                      </dt>
+                      <dd className="mt-1 font-semibold text-slate-700">
+                        {formatearLimite(parametro.lim_max_global)}
+                      </dd>
+                    </div>
+                  </dl>
+
                   {parametro.descripcion ? (
                     <p className="mt-4 text-sm leading-6 text-slate-500">
                       {parametro.descripcion}
@@ -264,7 +305,7 @@ export default function PaginaParametros() {
             </div>
 
             <div className="hidden overflow-x-auto md:block">
-              <table className="w-full min-w-[860px] text-left text-sm">
+              <table className="w-full min-w-[960px] text-left text-sm">
                 <thead>
                   <tr className="border-b border-slate-200/80 bg-slate-50/50">
                     <th className="px-5 py-3.5 font-semibold text-slate-500">
@@ -278,6 +319,9 @@ export default function PaginaParametros() {
                     </th>
                     <th className="px-5 py-3.5 font-semibold text-slate-500">
                       Unidad
+                    </th>
+                    <th className="px-5 py-3.5 font-semibold text-slate-500">
+                      Límite global
                     </th>
                     <th className="px-5 py-3.5 font-semibold text-slate-500">
                       Estado
@@ -316,6 +360,10 @@ export default function PaginaParametros() {
                       </td>
                       <td className="px-5 py-4 text-slate-600">
                         {parametro.unidad_medida || "-"}
+                      </td>
+                      <td className="px-5 py-4 text-slate-600">
+                        {formatearLimite(parametro.lim_min_global)} /{" "}
+                        {formatearLimite(parametro.lim_max_global)}
                       </td>
                       <td className="px-5 py-4">
                         <Badge
