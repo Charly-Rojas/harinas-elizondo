@@ -716,14 +716,33 @@ insert into public.parametros_calidad (
   descripcion
 )
 values
-  ('ALV_P', 'Tenacidad', null, 'alveografo', 'Parametro P del alveografo.'),
-  ('ALV_L', 'Extensibilidad', null, 'alveografo', 'Parametro L del alveografo.'),
-  ('ALV_W', 'Fuerza panadera', null, 'alveografo', 'Parametro W del alveografo.'),
-  ('ALV_S', 'Area de la curva', null, 'alveografo', 'Parametro S del alveografo.'),
-  ('ALV_PL', 'Relacion P/L', null, 'alveografo', 'Relacion de configuracion de la curva.'),
-  ('FAR_ABS', 'Absorcion de agua', null, 'farinografo', 'Absorcion de agua de la harina.'),
-  ('FAR_DES', 'Tiempo de desarrollo', null, 'farinografo', 'Tiempo de desarrollo de la masa.'),
-  ('FAR_EST', 'Estabilidad', null, 'farinografo', 'Estabilidad de la masa.'),
-  ('FAR_REB', 'Grado de reblandecimiento', null, 'farinografo', 'Debilitamiento o reblandecimiento de la masa.'),
-  ('FAR_FQN', 'Numero de calidad', null, 'farinografo', 'Farinograph Quality Number.')
+  -- Alveografo (CHOPIN AlveoLab)
+  ('ALV_P',  'Tenacidad (P)',               'mm',       'alveografo', 'Resistencia de la masa a ser estirada; corresponde a la altura de la curva.'),
+  ('ALV_L',  'Extensibilidad (L)',           'mm',       'alveografo', 'Capacidad de la masa de estirarse sin romperse; corresponde a la longitud de la curva.'),
+  ('ALV_W',  'Fuerza panadera (W)',          '10⁻⁴ J',  'alveografo', 'Energia total de deformacion; area bajo la curva alveografica.'),
+  ('ALV_PL', 'Relacion P/L',                null,       'alveografo', 'Balance entre tenacidad y extensibilidad; indica el equilibrio de la masa.'),
+  ('ALV_IE', 'Indice de elasticidad (Ie)',   '%',        'alveografo', 'Capacidad de la masa para recuperar su forma original al ser estirada.'),
+  -- Farinografo / DoughLAB (Brabender)
+  ('FAR_ABS', 'Absorcion de agua',          '%',   'farinografo', 'Porcentaje de agua necesario para alcanzar la consistencia optima de masa.'),
+  ('FAR_DES', 'Tiempo de desarrollo',       'min', 'farinografo', 'Tiempo para que la masa alcance la consistencia deseada desde el inicio del amasado.'),
+  ('FAR_EST', 'Estabilidad',                'min', 'farinografo', 'Duracion en la que la masa mantiene la consistencia optima; indica tolerancia al amasado.'),
+  ('FAR_REB', 'Grado de decaimiento',       'UF',  'farinografo', 'Descenso de consistencia al continuar amasando; cuanto mayor, mas debil la harina.'),
+  -- Reofermentografo (CHOPIN Rheo F4)
+  ('REO_T1',  'Tiempo de desarrollo maximo (T1)', 'h:min', 'otro', 'Tiempo al que la masa alcanza su volumen maximo de desarrollo.'),
+  ('REO_HM',  'Altura de desarrollo maximo (Hm)', 'mm',    'otro', 'Desarrollo maximo de la masa bajo esfuerzo de fermentacion.'),
+  ('REO_TOL', 'Tolerancia de masa (DT2)',          'min',   'otro', 'Diferencia T2 - T2''; indica la estabilidad de la masa en su punto maximo.'),
+  ('REO_HMP', 'Altura maxima de CO2 (H''m)',       'mm',    'otro', 'Pico de la curva de desprendimiento gaseoso.'),
+  ('REO_TX',  'Tiempo de porosidad (Tx)',           'h:min', 'otro', 'Momento en que la masa comienza a liberar CO2 al exterior.'),
+  ('REO_VOL', 'Volumen total de gas',               'mL',    'otro', 'Volumen total de CO2 desprendido durante la fermentacion (A1+A2).'),
+  ('REO_RET', 'Volumen de retencion',               'mL',    'otro', 'Volumen de CO2 retenido en la masa al final de la prueba (A1).'),
+  -- Analisis Basicos (Laboratorio General)
+  ('BAS_HUM', 'Humedad',        'g/100g',  'otro', 'Contenido de agua de la harina; maximo permitido 15 g/100g segun CAA (harinas 000 y 0000).'),
+  ('BAS_CEN', 'Cenizas',        'g/100g',  'otro', 'Contenido mineral; indica grado de extraccion e impurezas de salvado.'),
+  ('BAS_GH',  'Gluten humedo',  '%',       'otro', 'Proteinas insolubles con agua absorbida; obtenido por lavado de masa.'),
+  ('BAS_GS',  'Gluten seco',    '%',       'otro', 'Proteinas insolubles deshidratadas; permite calcular relacion GH/GS.'),
+  ('BAS_GI',  'Gluten Index',   null,      'otro', 'Indice de calidad del gluten en escala 0-100; relacionado con fuerza y cohesion.'),
+  ('BAS_FN',  'Falling Number', 'seg',     'otro', 'Actividad alfa-amilasica; valores bajos indican germinacion del trigo y harinas de baja calidad.'),
+  ('BAS_ALM', 'Almidon danado', 'UCD',     'otro', 'Dano mecanico del almidon durante molienda; rango optimo 16-23 UCD para panificacion.'),
+  ('BAS_COL', 'Color',          null,      'otro', 'Apreciacion visual o colorimetrica de la harina.'),
+  ('BAS_GRA', 'Granulometria',  'µm / %',  'otro', 'Distribucion de tamano de particula; influye en absorcion y comportamiento de la masa.')
 on conflict (clave) do nothing;

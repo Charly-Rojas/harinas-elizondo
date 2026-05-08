@@ -207,10 +207,11 @@ export default function PaginaCertificados() {
 
                     <div className="mt-4 flex flex-wrap gap-2">
                       <Link
-                        className="inline-flex min-h-9 items-center justify-center rounded-full bg-slate-950 px-4 py-2 text-sm font-medium text-white"
+                        className="inline-flex flex-col items-center justify-center rounded-full border border-amber-400 bg-amber-100 px-5 py-2 text-center font-medium text-amber-800 transition-colors hover:bg-amber-200"
                         href={`/certificados/${certificado.id_certificado}`}
                       >
-                        Ver / imprimir
+                        <span className="text-xs text-slate-900">Ver /</span>
+                        <span className="text-sm leading-tight">Imprimir</span>
                       </Link>
                     </div>
                   </article>
@@ -274,10 +275,11 @@ export default function PaginaCertificados() {
                         <td className="px-5 py-4">
                           <div className="flex items-center justify-end gap-2">
                             <Link
-                              className="inline-flex min-h-8 items-center justify-center rounded-full bg-slate-950 px-3 text-xs font-medium text-white"
+                              className="inline-flex flex-col items-center justify-center rounded-full border border-amber-400 bg-amber-100 px-4 py-1.5 text-center font-medium text-amber-800 transition-colors hover:bg-amber-200"
                               href={`/certificados/${certificado.id_certificado}`}
                             >
-                              Ver / imprimir
+                              <span className="text-[10px] text-slate-900">Ver /</span>
+                              <span className="text-xs leading-tight">Imprimir</span>
                             </Link>
                           </div>
                         </td>
