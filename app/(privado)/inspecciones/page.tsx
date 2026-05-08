@@ -258,7 +258,11 @@ export default function PaginaInspecciones() {
                     </div>
 
                     <div className="mt-4 flex flex-wrap gap-2">
-                      <Badge color="violet" radius="full" variant="soft">
+                      <Badge
+                        color={inspeccion.status === "aprobada" ? "green" : "red"}
+                        radius="full"
+                        variant="soft"
+                      >
                         {inspeccion.status}
                       </Badge>
                       {inspeccion.es_ajuste ? (
@@ -299,7 +303,7 @@ export default function PaginaInspecciones() {
                         Ajuste
                       </Button>
                       <Link
-                        className="inline-flex min-h-9 items-center justify-center rounded-full bg-violet-100 px-4 py-2 text-sm font-medium text-violet-700 transition-colors hover:bg-violet-200"
+                        className="inline-flex min-h-9 items-center justify-center rounded-full border border-amber-400 bg-amber-100 px-4 py-2 text-sm font-medium text-amber-800 transition-colors hover:bg-amber-200"
                         href={`/certificados?nueva=${inspeccion.id_inspeccion}`}
                       >
                         Certificar
@@ -385,7 +389,12 @@ export default function PaginaInspecciones() {
                           ) : null}
                         </td>
                         <td className="px-5 py-4">
-                          <Badge color="violet" radius="full" size="1" variant="soft">
+                          <Badge
+                            color={inspeccion.status === "aprobada" ? "green" : "red"}
+                            radius="full"
+                            size="1"
+                            variant="soft"
+                          >
                             {inspeccion.status}
                           </Badge>
                         </td>
@@ -406,7 +415,7 @@ export default function PaginaInspecciones() {
                               Ajuste
                             </Button>
                             <Link
-                              className="inline-flex min-h-8 items-center justify-center rounded-full bg-violet-100 px-3 text-xs font-medium text-violet-700 transition-colors hover:bg-violet-200"
+                              className="inline-flex min-h-8 items-center justify-center rounded-full border border-amber-400 bg-amber-100 px-3 text-xs font-medium text-amber-800 transition-colors hover:bg-amber-200"
                               href={`/certificados?nueva=${inspeccion.id_inspeccion}`}
                             >
                               Certificar
