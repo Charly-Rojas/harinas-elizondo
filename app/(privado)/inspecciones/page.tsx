@@ -299,7 +299,7 @@ export default function PaginaInspecciones() {
                         Ajuste
                       </Button>
                       <Link
-                        className="inline-flex min-h-9 items-center justify-center rounded-full bg-slate-950 px-4 py-2 text-sm font-medium text-white"
+                        className="inline-flex min-h-9 items-center justify-center rounded-full bg-violet-100 px-4 py-2 text-sm font-medium text-violet-700 transition-colors hover:bg-violet-200"
                         href={`/certificados?nueva=${inspeccion.id_inspeccion}`}
                       >
                         Certificar
@@ -406,7 +406,7 @@ export default function PaginaInspecciones() {
                               Ajuste
                             </Button>
                             <Link
-                              className="inline-flex min-h-8 items-center justify-center rounded-full bg-slate-950 px-3 text-xs font-medium text-white"
+                              className="inline-flex min-h-8 items-center justify-center rounded-full bg-violet-100 px-3 text-xs font-medium text-violet-700 transition-colors hover:bg-violet-200"
                               href={`/certificados?nueva=${inspeccion.id_inspeccion}`}
                             >
                               Certificar
