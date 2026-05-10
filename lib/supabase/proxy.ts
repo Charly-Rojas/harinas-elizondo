@@ -42,7 +42,7 @@ function esRutaPrivada(pathname: string) {
     pathname === "/";
 }
 
-export async function proxy(request: NextRequest) {
+export async function actualizar_sesion(request: NextRequest) {
   let response = NextResponse.next({ request });
 
   try {
