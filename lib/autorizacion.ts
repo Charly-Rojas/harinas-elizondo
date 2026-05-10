@@ -28,12 +28,16 @@ export function puede_escribir_panel(rol: RolUsuario) {
   );
 }
 
-export function es_gerente(rol: RolUsuario) {
+export function puede_ver_solo_estadisticas(rol: RolUsuario) {
   return (
     rol === "gte_calidad" ||
     rol === "gte_plantas" ||
     rol === "dir_operaciones"
   );
+}
+
+export function es_gerente(rol: RolUsuario) {
+  return puede_ver_solo_estadisticas(rol);
 }
 
 export function puede_asignar_rol(rolActor: RolUsuario, rolObjetivo: RolUsuario) {
