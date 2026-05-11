@@ -100,7 +100,7 @@ export function obtenerContextoRuta(pathname: string) {
   if (pathname.startsWith("/settings")) {
     return {
       seccion: "Usuario",
-      titulo: "Mi perfil",
+      titulo: "Gestión de usuarios",
     };
   }
 
