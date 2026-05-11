@@ -18,8 +18,8 @@ import {
   IconoUltraBall,
 } from "@/componentes/panel/iconos";
 import {
-  enlacesPanel,
   obtenerContextoRuta,
+  obtenerEnlacesPanelPorRol,
   rutaActiva,
 } from "@/componentes/panel/navegacion-panel";
 import type { RolUsuario } from "@/lib/tipos";
@@ -52,6 +52,7 @@ export function EncabezadoPanel({
   const [menuAbierto, setMenuAbierto] = useState(false);
   const { seccion, titulo } = obtenerContextoRuta(pathname);
   const iconoPokeball = obtenerIconoRol(rol);
+  const enlacesPermitidos = obtenerEnlacesPanelPorRol(rol);
 
   useEffect(() => {
     if (!menuAbierto) {
@@ -184,7 +185,7 @@ export function EncabezadoPanel({
             </div>
 
             <nav className="mt-5 flex flex-col gap-2">
-              {enlacesPanel.map((enlace) => {
+              {enlacesPermitidos.map((enlace) => {
                 const activo = rutaActiva(pathname, enlace.href);
                 const Icono = enlace.icono;
 

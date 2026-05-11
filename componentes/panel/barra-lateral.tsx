@@ -3,10 +3,15 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { enlacesPanel, rutaActiva } from "@/componentes/panel/navegacion-panel";
+import {
+  obtenerEnlacesPanelPorRol,
+  rutaActiva,
+} from "@/componentes/panel/navegacion-panel";
+import type { RolUsuario } from "@/lib/tipos";
 
-export function BarraLateral() {
+export function BarraLateral({ rol }: { rol: RolUsuario }) {
   const pathname = usePathname();
+  const enlacesPermitidos = obtenerEnlacesPanelPorRol(rol);
 
   return (
     <aside className="hidden w-[276px] shrink-0 overflow-hidden rounded-[32px] px-5 py-6 xl:sticky xl:top-5 xl:flex xl:self-start xl:flex-col">
@@ -22,7 +27,7 @@ export function BarraLateral() {
       </div>
 
       <nav className="mt-6 flex flex-col gap-2">
-        {enlacesPanel.map((enlace) => {
+        {enlacesPermitidos.map((enlace) => {
           const activo = rutaActiva(pathname, enlace.href);
           const Icono = enlace.icono;
 

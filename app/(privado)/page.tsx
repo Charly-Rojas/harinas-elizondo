@@ -71,6 +71,33 @@ type CertificadoRecienteQueryRow = Pick<
     | null;
 };
 
+type InspeccionGrafica = Pick<Inspeccion, "status" | "fecha_inspeccion">;
+
+type CertificadoGrafica = Pick<
+  CertificadoCalidad,
+  "status_certificado" | "status_envio" | "emitido_en" | "creado_en"
+>;
+
+type DatoBarra = {
+  etiqueta: string;
+  valor: number;
+  claseBarra: string;
+  clasePunto: string;
+};
+
+type ActividadMensual = {
+  clave: string;
+  etiqueta: string;
+  inspecciones: number;
+  certificados: number;
+};
+
+type GraficasDashboard = {
+  inspeccionesPorEstado: DatoBarra[];
+  certificadosPorEnvio: DatoBarra[];
+  actividadMensual: ActividadMensual[];
+};
+
 const RESUMEN_INICIAL: ResumenDashboard = {
   clientesActivos: 0,
   lotesRegistrados: 0,
@@ -79,11 +106,176 @@ const RESUMEN_INICIAL: ResumenDashboard = {
   certificadosPendientesEnvio: 0,
 };
 
+const CONFIG_ESTADOS_INSPECCION: Array<
+  { estado: EstadoInspeccion } & Omit<DatoBarra, "valor">
+> = [
+  {
+    claseBarra: "bg-slate-500",
+    clasePunto: "bg-slate-500",
+    estado: "borrador",
+    etiqueta: "Borrador",
+  },
+  {
+    claseBarra: "bg-sky-500",
+    clasePunto: "bg-sky-500",
+    estado: "cerrada",
+    etiqueta: "Cerradas",
+  },
+  {
+    claseBarra: "bg-emerald-500",
+    clasePunto: "bg-emerald-500",
+    estado: "aprobada",
+    etiqueta: "Aprobadas",
+  },
+  {
+    claseBarra: "bg-rose-500",
+    clasePunto: "bg-rose-500",
+    estado: "cancelada",
+    etiqueta: "Canceladas",
+  },
+];
+
+const CONFIG_ESTADOS_ENVIO: Array<
+  { estado: EstadoEnvioCertificado } & Omit<DatoBarra, "valor">
+> = [
+  {
+    claseBarra: "bg-amber-500",
+    clasePunto: "bg-amber-500",
+    estado: "pendiente",
+    etiqueta: "Pendientes",
+  },
+  {
+    claseBarra: "bg-emerald-500",
+    clasePunto: "bg-emerald-500",
+    estado: "enviado",
+    etiqueta: "Enviados",
+  },
+  {
+    claseBarra: "bg-rose-500",
+    clasePunto: "bg-rose-500",
+    estado: "fallido",
+    etiqueta: "Fallidos",
+  },
+];
+
 function obtenerPrimerDiaMesActual() {
   const hoy = new Date();
   const anio = hoy.getFullYear();
   const mes = String(hoy.getMonth() + 1).padStart(2, "0");
   return `${anio}-${mes}-01`;
+}
+
+function obtenerFechaInicioMeses(cantidadMeses: number) {
+  const hoy = new Date();
+  const inicio = new Date(hoy.getFullYear(), hoy.getMonth() - cantidadMeses + 1, 1);
+  const anio = inicio.getFullYear();
+  const mes = String(inicio.getMonth() + 1).padStart(2, "0");
+  return `${anio}-${mes}-01`;
+}
+
+function obtenerClaveMes(fecha: string | null | undefined) {
+  if (!fecha) {
+    return null;
+  }
+
+  const match = /^(\d{4})-(\d{2})/.exec(fecha);
+  return match ? `${match[1]}-${match[2]}` : null;
+}
+
+function crearActividadMensualVacia(cantidadMeses = 6): ActividadMensual[] {
+  const hoy = new Date();
+
+  return Array.from({ length: cantidadMeses }).map((_, indice) => {
+    const fecha = new Date(
+      hoy.getFullYear(),
+      hoy.getMonth() - cantidadMeses + 1 + indice,
+      1
+    );
+    const clave = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, "0")}`;
+    const etiqueta = new Intl.DateTimeFormat("es-MX", {
+      month: "short",
+    }).format(fecha);
+
+    return {
+      certificados: 0,
+      clave,
+      etiqueta,
+      inspecciones: 0,
+    };
+  });
+}
+
+function crearGraficasVacias(): GraficasDashboard {
+  return {
+    actividadMensual: crearActividadMensualVacia(),
+    certificadosPorEnvio: CONFIG_ESTADOS_ENVIO.map((config) => ({
+      claseBarra: config.claseBarra,
+      clasePunto: config.clasePunto,
+      etiqueta: config.etiqueta,
+      valor: 0,
+    })),
+    inspeccionesPorEstado: CONFIG_ESTADOS_INSPECCION.map((config) => ({
+      claseBarra: config.claseBarra,
+      clasePunto: config.clasePunto,
+      etiqueta: config.etiqueta,
+      valor: 0,
+    })),
+  };
+}
+
+function calcularGraficasDashboard(
+  inspecciones: InspeccionGrafica[],
+  certificados: CertificadoGrafica[]
+): GraficasDashboard {
+  const actividadMensual = crearActividadMensualVacia();
+  const actividadPorMes = new Map(
+    actividadMensual.map((actividad) => [actividad.clave, actividad])
+  );
+
+  const inspeccionesPorEstado = CONFIG_ESTADOS_INSPECCION.map((config) => ({
+    claseBarra: config.claseBarra,
+    clasePunto: config.clasePunto,
+    etiqueta: config.etiqueta,
+    valor: inspecciones.filter((inspeccion) => inspeccion.status === config.estado)
+      .length,
+  }));
+
+  const certificadosPorEnvio = CONFIG_ESTADOS_ENVIO.map((config) => ({
+    claseBarra: config.claseBarra,
+    clasePunto: config.clasePunto,
+    etiqueta: config.etiqueta,
+    valor: certificados.filter(
+      (certificado) => certificado.status_envio === config.estado
+    ).length,
+  }));
+
+  inspecciones.forEach((inspeccion) => {
+    const clave = obtenerClaveMes(inspeccion.fecha_inspeccion);
+    const actividad = clave ? actividadPorMes.get(clave) : null;
+
+    if (actividad) {
+      actividad.inspecciones += 1;
+    }
+  });
+
+  certificados.forEach((certificado) => {
+    if (certificado.status_certificado !== "emitido") {
+      return;
+    }
+
+    const clave = obtenerClaveMes(certificado.emitido_en ?? certificado.creado_en);
+    const actividad = clave ? actividadPorMes.get(clave) : null;
+
+    if (actividad) {
+      actividad.certificados += 1;
+    }
+  });
+
+  return {
+    actividadMensual,
+    certificadosPorEnvio,
+    inspeccionesPorEstado,
+  };
 }
 
 function obtenerPrimerElemento<T>(registros?: T[] | null) {
@@ -156,8 +348,132 @@ function clasesEstadoEnvio(status: EstadoEnvioCertificado) {
   }
 }
 
+function GraficaBarrasHorizontales({
+  datos,
+  titulo,
+  descripcion,
+}: {
+  datos: DatoBarra[];
+  titulo: string;
+  descripcion: string;
+}) {
+  const total = datos.reduce((suma, dato) => suma + dato.valor, 0);
+  const maximo = Math.max(...datos.map((dato) => dato.valor), 1);
+
+  return (
+    <article className="tarjeta-suave rounded-[28px] p-5 md:p-6">
+      <div>
+        <h2 className="text-lg font-semibold text-slate-900">{titulo}</h2>
+        <p className="mt-1 text-sm text-slate-500">{descripcion}</p>
+      </div>
+
+      <div className="mt-6 space-y-4">
+        {datos.map((dato) => {
+          const porcentaje = total > 0 ? Math.round((dato.valor / total) * 100) : 0;
+          const ancho = `${Math.max((dato.valor / maximo) * 100, dato.valor > 0 ? 8 : 0)}%`;
+
+          return (
+            <div key={dato.etiqueta}>
+              <div className="flex items-center justify-between gap-3 text-sm">
+                <div className="flex min-w-0 items-center gap-2">
+                  <span className={`h-2.5 w-2.5 rounded-full ${dato.clasePunto}`} />
+                  <span className="truncate font-medium text-slate-700">
+                    {dato.etiqueta}
+                  </span>
+                </div>
+                <span className="font-mono text-slate-500">
+                  {dato.valor.toLocaleString("es-MX")} · {porcentaje}%
+                </span>
+              </div>
+              <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-slate-100">
+                <div
+                  aria-label={`${dato.etiqueta}: ${dato.valor}`}
+                  className={`h-full rounded-full ${dato.claseBarra}`}
+                  style={{ width: ancho }}
+                />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </article>
+  );
+}
+
+function GraficaActividadMensual({ datos }: { datos: ActividadMensual[] }) {
+  const maximo = Math.max(
+    ...datos.flatMap((dato) => [dato.inspecciones, dato.certificados]),
+    1
+  );
+
+  return (
+    <article className="tarjeta-suave rounded-[28px] p-5 md:p-6 xl:col-span-2">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold text-slate-900">
+            Actividad mensual
+          </h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Inspecciones registradas contra certificados emitidos en los ultimos 6 meses.
+          </p>
+        </div>
+
+        <div className="flex flex-wrap gap-3 text-xs font-medium text-slate-500">
+          <span className="inline-flex items-center gap-2">
+            <span className="h-2.5 w-2.5 rounded-full bg-sky-500" />
+            Inspecciones
+          </span>
+          <span className="inline-flex items-center gap-2">
+            <span className="h-2.5 w-2.5 rounded-full bg-violet-500" />
+            Certificados
+          </span>
+        </div>
+      </div>
+
+      <div className="mt-6 grid h-64 grid-cols-6 items-end gap-3 border-b border-slate-200 pb-3">
+        {datos.map((dato) => (
+          <div
+            className="flex h-full min-w-0 flex-col justify-end gap-3"
+            key={dato.clave}
+          >
+            <div className="flex flex-1 items-end justify-center gap-1.5">
+              <div
+                aria-label={`${dato.etiqueta}: ${dato.inspecciones} inspecciones`}
+                className="w-full max-w-8 rounded-t-lg bg-sky-500"
+                style={{
+                  height: `${Math.max((dato.inspecciones / maximo) * 100, dato.inspecciones > 0 ? 8 : 0)}%`,
+                }}
+                title={`${dato.inspecciones} inspecciones`}
+              />
+              <div
+                aria-label={`${dato.etiqueta}: ${dato.certificados} certificados`}
+                className="w-full max-w-8 rounded-t-lg bg-violet-500"
+                style={{
+                  height: `${Math.max((dato.certificados / maximo) * 100, dato.certificados > 0 ? 8 : 0)}%`,
+                }}
+                title={`${dato.certificados} certificados`}
+              />
+            </div>
+            <div className="text-center">
+              <p className="truncate text-xs font-semibold capitalize text-slate-500">
+                {dato.etiqueta}
+              </p>
+              <p className="mt-1 font-mono text-xs text-slate-400">
+                {dato.inspecciones}/{dato.certificados}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </article>
+  );
+}
+
 export default function PaginaHome() {
   const [resumen, setResumen] = useState<ResumenDashboard>(RESUMEN_INICIAL);
+  const [graficas, setGraficas] = useState<GraficasDashboard>(
+    crearGraficasVacias
+  );
   const [inspeccionesRecientes, setInspeccionesRecientes] = useState<
     InspeccionReciente[]
   >([]);
@@ -177,6 +493,7 @@ export default function PaginaHome() {
       try {
         const supabase = crearClienteNavegador();
         const primerDiaMesActual = obtenerPrimerDiaMesActual();
+        const fechaInicioGraficas = obtenerFechaInicioMeses(6);
 
         const [
           clientesActivosQuery,
@@ -186,6 +503,8 @@ export default function PaginaHome() {
           certificadosPendientesEnvioQuery,
           inspeccionesRecientesQuery,
           certificadosRecientesQuery,
+          inspeccionesGraficasQuery,
+          certificadosGraficasQuery,
         ] = await Promise.all([
           supabase
             .from("clientes")
@@ -221,6 +540,14 @@ export default function PaginaHome() {
             )
             .order("creado_en", { ascending: false })
             .limit(5),
+          supabase
+            .from("inspecciones")
+            .select("status, fecha_inspeccion")
+            .gte("fecha_inspeccion", fechaInicioGraficas),
+          supabase
+            .from("certificados_calidad")
+            .select("status_certificado, status_envio, emitido_en, creado_en")
+            .gte("creado_en", fechaInicioGraficas),
         ]);
 
         if (cancelado) {
@@ -235,6 +562,8 @@ export default function PaginaHome() {
           certificadosPendientesEnvioQuery.error,
           inspeccionesRecientesQuery.error,
           certificadosRecientesQuery.error,
+          inspeccionesGraficasQuery.error,
+          certificadosGraficasQuery.error,
         ].filter(Boolean);
 
         if (errores.length > 0) {
@@ -250,6 +579,12 @@ export default function PaginaHome() {
           certificadosEmitidosMes: certificadosEmitidosMesQuery.count ?? 0,
           certificadosPendientesEnvio: certificadosPendientesEnvioQuery.count ?? 0,
         });
+        setGraficas(
+          calcularGraficasDashboard(
+            (inspeccionesGraficasQuery.data ?? []) as InspeccionGrafica[],
+            (certificadosGraficasQuery.data ?? []) as CertificadoGrafica[]
+          )
+        );
         setInspeccionesRecientes(
           ((inspeccionesRecientesQuery.data ?? []) as InspeccionRecienteQueryRow[]).map(
             (inspeccion) => ({
@@ -287,6 +622,7 @@ export default function PaginaHome() {
             "No se pudo cargar el dashboard en este momento. Intenta recargar la pagina."
           );
           setResumen(RESUMEN_INICIAL);
+          setGraficas(crearGraficasVacias());
           setInspeccionesRecientes([]);
           setCertificadosRecientes([]);
         }
@@ -446,6 +782,20 @@ export default function PaginaHome() {
                 </article>
               );
             })}
+          </div>
+
+          <div className="grid gap-5 xl:grid-cols-4">
+            <GraficaActividadMensual datos={graficas.actividadMensual} />
+            <GraficaBarrasHorizontales
+              descripcion="Distribucion de inspecciones registradas en los ultimos 6 meses."
+              datos={graficas.inspeccionesPorEstado}
+              titulo="Inspecciones por estado"
+            />
+            <GraficaBarrasHorizontales
+              descripcion="Seguimiento de certificados creados en los ultimos 6 meses."
+              datos={graficas.certificadosPorEnvio}
+              titulo="Certificados por envio"
+            />
           </div>
 
           <div className="grid gap-5 xl:grid-cols-[minmax(0,1.55fr)_minmax(320px,1fr)]">
